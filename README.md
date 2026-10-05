@@ -23,54 +23,74 @@ Fairy 是一个本地优先的个人 Agent 工作台：可以操作真实电脑�
 - **多模型**：DeepSeek-V4-Flash 与 MiniMax-M3，统一由 `config/config.json` 管理。
 - **原生 MCP 工具**：Agent 可连接 stdio 或 Streamable HTTP MCP Server，在启动时动态发现并注册 `tools/list` 工具，通过统一的工具审批、超时和命名空间调用。
 - **电脑操控工具**：基于 `cua-auto` 的本地原生工具，支持屏幕观察与截图、鼠标、键盘、窗口和剪贴板操作；不新增 HTTP 端口。
+- **外部通道（QQ / 微信）**：`skills/qq-bot` 与 `skills/wechat-bot` 把 QQ 机器人、微信桥接收到的消息转发给 Agent，回复按原通道发回；文本、图片、文件双向，支持私聊/群聊白名单与长回复切分。
+- **多账号与家庭组**：前端账号密码登录；管理员用一次性邀请码把成员拉进家庭组；会话与长期记忆按账号隔离，工作区共享（产物可互通）。
+- **定时任务**：`skills/scheduled-tasks`，支持 `--in` / `--daily` / `--weekly` / `--every` / `--at`，可指定推送 QQ 或微信通道。
+- **文件管理器独立页**：`/filemanage` 多标签浏览、断点续传上传、回收站（可撤销恢复）与 WebDAV 挂载。
 - **本地会话持久化**：session JSON、append-only events、usage、trace 与音频记录。
 - **桌面启动**：Tauri 窗口、仓库根目录 exe、Windows/POSIX 启动脚本。
 
 ## 架构
 
 ```text
-浏览器 / Tauri
-  │
-  ├─ 文字对话 http://127.0.0.1:5173
-  ├─ 语音页面 http://127.0.0.1:5173/#/voice
-  └─ filemanager viewer
-       │
-       ▼
-Node API / 静态服务 frontend/server.cjs :8081
-  ├─ /api/models
-  ├─ /api/sessions
-  ├─ /api/chat
-  ├─ /api/upload
-  ├─ /api/file-content
-  └─ /viewer.html
-       │
-       ▼
-Go Agent .tools/agent-loop-<platform>-<arch>
-  ├─ LLM API
-  ├─ tool registry / dispatcher
-  ├─ MCP client / dynamic tools
-  ├─ session + memory
-  ├─ skills
-  └─ subagent
-       │
-       ▼
-语音服务 voice/voice_service.py
-  ├─ HTTP TTS :8787
-  └─ WebSocket STT :8788
+┌─ 入口 ────────────────────────────────────────────────────────┐
+│ 浏览器 / Tauri 桌面壳            http://127.0.0.1:5173         │
+│ 外部通道  QQ 机器人 / 微信桥接    skills/qq-bot、wechat-bot    │
+└───────────────────────────┬───────────────────────────────────┘
+                            ▼
+┌─ 服务层 ──────────────────────────────────────────────────────┐
+│ Node API / 静态服务        frontend/server.cjs        :8081    │
+│   /api/models  /api/sessions  /api/chat  /api/upload  …        │
+│ 文件管理器                 filemanager/filemanager.cjs         │
+│   /filemanage  /fm-assets  /viewer.html  /dav（WebDAV）        │
+│ 语音服务                   voice/voice_service.py              │
+│   HTTP TTS :8787        WebSocket STT :8788                    │
+└───────────────────────────┬───────────────────────────────────┘
+                            ▼
+┌─ Agent 层 ────────────────────────────────────────────────────┐
+│ Go Agent                   .tools/agent-loop-<platform>-<arch> │
+│   LLM 调用（多模型 + 备用模型自动切换）                        │
+│   工具注册 / 派发（bash、文件、截图、cua 电脑操控、MCP…）      │
+│   Plan 状态机 + plan gate + JEV 技能重排                       │
+│   session / memory / skills / subagent                         │
+└───────────────────────────┬───────────────────────────────────┘
+                            ▼
+┌─ 数据层 ──────────────────────────────────────────────────────┐
+│ memory/    长期记忆、分层 KEY、每日摘要、SQLite 索引           │
+│ config/    模型、通道、prompt、工具 schema                     │
+│ workspace/ 工作区：上传、下载与产物                            │
+└───────────────────────────────────────────────────────────────┘
 ```
+
+### 端口一览
+
+| 端口 | 组件 | 用途 |
+|---|---|---|
+| 5173 | Vite | 前端页面（文字对话、`/#/voice` 语音页、文件管理器入口） |
+| 8081 | Node API | Agent 接口、静态资源；文件管理器与 WebDAV 也挂在这里 |
+| 8787 | voice_service | TTS（HTTP，流式） |
+| 8788 | voice_service | STT（WebSocket） |
+
+### 数据流
+
+1. 消息从**网页/桌面**或**外部通道**进入，统一落到 `POST /api/chat`。
+2. Node 层负责会话与附件，把请求交给 Go Agent 执行。
+3. Agent 通过工具读写宿主文件、跑命令、调 MCP 工具，并把过程写进 `memory/sessions/**` 的 events/trace。
+4. 结果回到 Node 层渲染成回复（含 `show_result` 产物卡片），需要时再按原通道发回 QQ / 微信。
 
 ## 快速启动
 
 ### 准备配置
 
-公开仓不含真实机器配置，首次运行先复制示例：
+仓库不含真实机器配置，首次运行前按需准备：
 
 ```bash
+# 公开仓自带示例文件，复制后按需修改
 cp config/config.example.json config/config.json
-cp config/channels.example.json config/channels.json   # 可选，QQ/微信通道
+cp config/channels.example.json config/channels.json   # 可选：QQ / 微信通道
 ```
 
-再按需填入你自己的模型 API Key（`config/config.json` 里的 `api_key` 支持 `READ_FROM_*` 占位符，会从仓库根目录同名 txt 文件读取）。
+`config/config.json` 里的 `api_key` 支持 `READ_FROM_*` 占位符（从仓库根目录同名 txt 文件读取），也可以直接填自己的 Key；这些文件都已被 `.gitignore` 忽略，不会入库。
 
 ### 一键开发模式
 
@@ -223,6 +243,71 @@ API key 从仓库根目录读取：
 - `MINIMAX_key.txt`
 
 不要把真实 key 提交到 Git。
+
+默认模型与备用模型在 `settings` 里配置：
+
+```json
+"settings": {
+  "default_model": "minimax-m3",
+  "fallback_model": "deepseek-v4-flash",
+  "auto_fallback": true
+}
+```
+
+`auto_fallback` 打开时，主模型不可用（限流、超时、5xx、返回契约不符）会自动切到 `fallback_model` 继续跑完当前请求，降级原因会写进该轮的 trace。前端「设置 → 模型」里改的就是这两个字段。
+
+## 通道（QQ / 微信）
+
+外部通道让 Agent 在聊天软件里也能对话，链路是：
+
+```text
+QQ 机器人 / 微信桥接 ──► POST /api/chat ──► Go Agent ──► 回复（可带附件）──► 原通道
+```
+
+### 配置
+
+```bash
+cp config/channels.example.json config/channels.json
+```
+
+```json
+{
+  "qq": {
+    "enabled": true,
+    "allowUsers": [],
+    "allowGroups": [],
+    "ackDelaySeconds": 8,
+    "replyChunkSize": 3500,
+    "maxPassiveReplies": 5,
+    "sendFiles": true,
+    "maxFileSizeMB": 20
+  },
+  "wechat": {
+    "enabled": true,
+    "allowUsers": [],
+    "ackDelaySeconds": 8,
+    "replyChunkSize": 1800,
+    "turnTimeoutSeconds": 1800
+  }
+}
+```
+
+- `allowUsers` / `allowGroups` 留空表示**全拒**：只有列进去的账号或群会被响应，避免机器人被陌生人刷。
+- `ackDelaySeconds`：先回一句"收到，正在处理"，超过这个时间才发正式回复。
+- `replyChunkSize`：长回复按字数切分，QQ 与微信的每日/单条上限不同，所以默认值不一样。
+
+### 凭据（只放本机，不入库）
+
+| 通道 | 凭据位置 | 说明 |
+|---|---|---|
+| QQ | `~/.config/fairy/qq-bot.json` | QQ 开放平台机器人的 AppID / AppSecret，以及可选的 Fairy 本地调用令牌 |
+| 微信 | `~/.config/fairy/wechat/` | 每个账号一份；用 `python skills/wechat-bot/bot.py --account <标签>` 单独起一个桥接实例 |
+
+`pnpm dev` 会按 `config/channels.json` 自动拉起已启用的桥接，启动日志里能看到 `[wechat] bridge for 'xxx' started` 这样的行。
+
+### 会话归属
+
+通道消息与网页端共用同一套会话与记忆：**每个通道各占一个主会话级别**（`kind=main`，跨天延续，可派子任务），侧栏按其"途径"标签区分（QQ 私聊 / QQ 群聊 / 微信）。也就是说，在 QQ 里让 Agent 做的事，网页端打开对应会话就能看到完整过程与产物。
 
 ## MCP 工具
 
@@ -378,6 +463,9 @@ pnpm prompt:check
 ```
 
 运行时通过 `prompts.modules_dir` 定位按需 prompt，不再沿旧 `config/locales` 路径查找。
+
+> 公开仓（FairyAgent）只带单文件 `config/system/zh.md`：`manifest.yml` 与 `parts/` 属于私有内容，不随公开仓发布。
+> 运行时会自动判断——`parts/` 存在就按 `manifest.yml` 拼装，缺失则回退到 `zh.md`，所以公开仓开箱即可运行。
 
 ## 关键机制
 
@@ -599,27 +687,32 @@ memory/segmented/
 
 ```text
 Fairy/
-├─ agent/                  Go Agent 引擎
-├─ frontend/               React + Vite + Node API
+├─ agent/                  Go Agent 引擎（LLM、工具、Plan、JEV、记忆、子任务）
+├─ frontend/               React + Vite 界面 + Node API（server.cjs）
 ├─ voice/                  TTS / STT 服务
-├─ filemanager/            文件浏览、viewer 与本地预览库
+├─ filemanager/            文件浏览、viewer、WebDAV、回收站与预览库
 ├─ config/
-│  ├─ config.json
-│  ├─ system/              主 system prompt
-│  ├─ modules/             按需 prompt
-│  └─ tools/               工具 schema
-├─ memory/                 本地记忆
-├─ skills/                 Skills
-├─ workspace/              工作区与交付物
-├─ runs/                    Agent run logs
+│  ├─ config.json          模型与运行参数（本地生成，不入库）
+│  ├─ channels.json        QQ / 微信通道开关与白名单（本地生成，不入库）
+│  ├─ system/              system prompt（公开仓只含 zh.md）
+│  ├─ modules/             按需 prompt（摘要、记忆抽取、反思…）
+│  ├─ tools/               工具 schema
+│  └─ mock_responses.json  测试用 mock
+├─ skills/                 Skills（含 qq-bot、wechat-bot、scheduled-tasks…）
 ├─ scripts/                构建、启动、检查脚本
 ├─ src-tauri/              Tauri 桌面壳
 ├─ tests/                  行为协议测试
 ├─ tool_gateway/           HTTP 工具兼容网关与 mock
-├─ Fairy.exe               Windows 桌面版
+├─ tools/                  辅助工具脚本
+├─ memory/                 本地记忆与会话（运行时生成，不入库）
+├─ workspace/              工作区：上传、下载与产物（运行时生成，不入库）
+├─ runs/                   Agent run logs 与回滚快照（运行时生成，不入库）
+├─ Fairy.exe               Windows 桌面版（发布产物，不入库）
 ├─ 启动 Fairy.cmd
 └─ 启动 Fairy.sh
 ```
+
+> 公开仓 `FairyAgent` 额外省略机器相关目录：`workspace/`、`runs/`、`memory/`、`deploy/`、`docs/`、`infra/`、`landing/`、`experiments/`，以及提示词 `config/system/parts/`（只留 `zh.md`）。
 
 ## TODO
 
