@@ -1552,6 +1552,41 @@ function parseSkillDescription(skillFile) {
   return paragraph ? paragraph.slice(0, 300) : "";
 }
 
+// 与 Go 侧 agent/skillroots.go 的 userLevelSkillRoots() 保持一致。
+// 只扫仓库 skills/ 的话，装在用户级根里的技能在设置里就没有开关——
+// 装完看着像没装，这是同一个根因在两个地方各表现一次。
+function userLevelSkillRoots() {
+  let home = "";
+  try { home = require("os").homedir() || process.env.HOME || ""; } catch {}
+  if (!home) return [];
+  return [
+    path.join(home, ".fairy", "skills"),
+    path.join(home, ".agents", "skills"),
+    path.join(home, ".claude", "skills"),
+  ];
+}
+
+function skillRoots(cfg) {
+  return [path.join(REPO, (cfg && cfg.skills_dir) || "skills"), ...userLevelSkillRoots()];
+}
+
+function findSkillFile(roots, name) {
+  for (const root of roots) {
+    const candidate = path.join(root, name, "SKILL.md");
+    if (fs.existsSync(candidate)) return candidate;
+  }
+  return null;
+}
+
+// config.json 会被提交到 git，用户级技能位置必须写成 ~ 相对，
+// 否则换台机器就指向一个不存在的绝对路径。
+function homeRelative(p) {
+  let home = "";
+  try { home = require("os").homedir() || process.env.HOME || ""; } catch {}
+  if (home && p.startsWith(home + path.sep)) return "~" + p.slice(home.length);
+  return p;
+}
+
 function readSkillSettings() {
   const cfg = JSON.parse(readStripped(APP_CONFIG) || "{}");
   const configured = new Map();
@@ -1565,22 +1600,28 @@ function readSkillSettings() {
       registered: true,
     });
   }
-  const root = path.join(REPO, cfg.skills_dir || "skills");
-  let entries = [];
-  try { entries = fs.readdirSync(root, { withFileTypes: true }); } catch {}
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const name = entry.name;
-    const skillFile = path.join(root, name, "SKILL.md");
-    if (!fs.existsSync(skillFile)) continue;
-    const prev = configured.get(name) || {};
-    configured.set(name, {
-      name,
-      description: prev.description || parseSkillDescription(skillFile),
-      location: prev.location || ("/skills/" + name),
-      enabled: prev.enabled !== false,
-      registered: !!prev.registered,
-    });
+  for (const root of skillRoots(cfg)) {
+    let entries = [];
+    try { entries = fs.readdirSync(root, { withFileTypes: true }); } catch { continue; }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const name = entry.name;
+      const skillFile = path.join(root, name, "SKILL.md");
+      if (!fs.existsSync(skillFile)) continue;
+      const prev = configured.get(name) || {};
+      // 已注册的沿用原 location，未注册的按实际所在根给出真实路径，
+      // 否则前端拿到的 location 会指向不存在的 /skills/<name>。
+      const location = prev.registered && prev.location
+        ? prev.location
+        : (root.startsWith(REPO) ? "/skills/" + name : homeRelative(root) + "/" + name);
+      configured.set(name, {
+        name,
+        description: prev.description || parseSkillDescription(skillFile),
+        location,
+        enabled: prev.enabled !== false,
+        registered: !!prev.registered,
+      });
+    }
   }
   return [...configured.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -1594,9 +1635,13 @@ function writeSkillSetting(name, enabled) {
   if (index >= 0) {
     skills[index] = { ...skills[index], enabled: enabled !== false };
   } else {
-    const location = path.join(REPO, cfg.skills_dir || "skills", key, "SKILL.md");
-    if (!fs.existsSync(location)) throw new Error("unknown skill: " + key);
-    skills.push({ name: key, description: parseSkillDescription(location), location: "/skills/" + key, enabled: enabled !== false });
+    // 技能可能装在用户级根（~/.fairy/skills 等），不能只认仓库路径，
+    // 否则那些技能在设置里看得见、开关却报错。
+    const skillFile = findSkillFile(skillRoots(cfg), key);
+    if (!skillFile) throw new Error("unknown skill: " + key);
+    const dir = path.dirname(skillFile);
+    const location = dir.startsWith(REPO) ? "/skills/" + key : homeRelative(dir);
+    skills.push({ name: key, description: parseSkillDescription(skillFile), location, enabled: enabled !== false });
   }
   cfg.skills = skills;
   const tmp = APP_CONFIG + ".tmp";
@@ -3025,6 +3070,18 @@ const testEcho = "let b='';process.stdin.on('data',d=>{b+=d;let i;while((i=b.ind
 function handleRequest(req, res) {
   const url = new URL(req.url, "http://localhost");
   const pathname = url.pathname;
+
+  // HTTP 规定 HEAD 的状态码与响应头必须与 GET 一致，只是省略响应体。
+  // 之前只认 GET：实测 HEAD / 与 HEAD /api/files 全部返回 404。任何用 HEAD
+  // 做探针的中间层（Cloudflare tunnel、Caddy、监控、CDN 回源）都会拿到 404，
+  // 这是公网上「有概率 404」的一个确定来源。这里把 HEAD 当 GET 路由，
+  // 同时抑制响应体。
+  if (req.method === "HEAD") {
+    const innerEnd = res.end.bind(res);
+    res.write = () => true;
+    res.end = () => innerEnd();
+    req.method = "GET";
+  }
   const method = req.method;
 
   // While auth is off this mirrors the historical desktop behaviour. With auth on
@@ -4204,6 +4261,18 @@ function handleRequest(req, res) {
       if (pathname === "/api/scheduled-tasks/toggle") {
         const task = scheduler.updateTask(file, owner, id, { enabled: !!data.enabled });
         if (!task) { sendJson({ ok: false, error: "任务不存在" }, 404); return; }
+        sendJson({ ok: true, task: scheduler.presentTask(task) });
+        return;
+      }
+
+      // Full update: the panel edits a task in place (time, prompt, notify...)
+      // instead of forcing delete + recreate. updateTask reassigns the patch and,
+      // when schedule changes, recomputes next_run_at.
+      if (pathname === "/api/scheduled-tasks/update") {
+        const checked = scheduler.validateTask(data);
+        if (checked.error) { sendJson({ ok: false, error: checked.error }, 400); return; }
+        const task = scheduler.updateTask(file, owner, id, checked.value);
+        if (!task) { sendJson({ ok: false, error: "\u4efb\u52a1\u4e0d\u5b58\u5728" }, 404); return; }
         sendJson({ ok: true, task: scheduler.presentTask(task) });
         return;
       }

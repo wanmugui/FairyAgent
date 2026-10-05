@@ -123,6 +123,8 @@ func (t *Tool) Execute(ctx context.Context, invocation dtypes.ToolInvocation) (d
 			return shared.ErrorResult("web_search", err), nil
 		}
 		sources, poolTruncated := selectSources(results, queries[0], maxResults, maxSnippetChars)
+		sources = filterGenericEcho(sources, queries[0])
+		sources, providers = t.retryWithRelaxedQuery(ctx, queries[0], sources, providers, maxResults, maxSnippetChars)
 		return dtypes.ToolResult{Value: map[string]any{
 			"tool":      "web_search",
 			"ok":        true,
@@ -160,6 +162,7 @@ func (t *Tool) Execute(ctx context.Context, invocation dtypes.ToolInvocation) (d
 			continue
 		}
 		sources, poolTruncated := selectSources(results, q, perQuery, maxSnippetChars)
+		sources = filterGenericEcho(sources, q)
 		allSources = append(allSources, sources...)
 		entries[i] = batchEntry{Query: q, Sources: sources, Count: len(sources), Truncated: poolTruncated}
 	}
@@ -193,9 +196,6 @@ func selectSources(results []SearchResult, query string, maxResults, maxSnippetC
 	return sources, snippetTruncated || len(results) > maxResults
 }
 
-// rankAndFilter collapses duplicate URLs, scores each result against the query,
-// and keeps the most relevant entries up to maxResults. Results that share a
-// score keep their original provider order.
 func rankAndFilter(results []SearchResult, query string, maxResults int) []SearchResult {
 	terms := queryTerms(query)
 	type scored struct {
@@ -503,4 +503,120 @@ func decodeStringSlice(v any) []string {
 		return []string{t}
 	}
 	return nil
+}
+
+// filterGenericEcho drops sources that only echo the most generic term of a
+// compound query.
+//
+// Bing's public HTML endpoint answers a multi-term query with generic pages
+// surprisingly often: "Blender 角色建模 教程" came back as blender.org download
+// pages and a Baidu Baike entry, all matching "blender" and none of the CJK
+// terms.
+//
+// The decision is relative, not absolute. Requiring a fixed "covers N terms"
+// bar was wrong: for a query the upstream genuinely cannot answer, NO source
+// covers the bar, and an absolute rule then falls back to returning everything
+// -- silently disabling the filter in exactly the case it exists for. Instead we
+// keep only the sources that carry the query better than the field does.
+//
+// A source survives when it either names two or more distinct query terms, or
+// scores at least half the best score in the set. If nothing survives, the input
+// is returned unchanged: a weak result set is still better than none.
+func filterGenericEcho(sources []map[string]any, query string) []map[string]any {
+	terms := queryTerms(query)
+	if len(terms) < 2 || len(sources) == 0 {
+		return sources
+	}
+	type scoredSrc struct {
+		src     map[string]any
+		score   int
+		covered int
+	}
+	all := make([]scoredSrc, 0, len(sources))
+	best := 0
+	for _, src := range sources {
+		res := SearchResult{
+			Title: sourceTitle(src),
+			URL:   sourceURL(src),
+		}
+		hay := strings.ToLower(res.Title + " " + res.URL)
+		covered := 0
+		for _, t := range terms {
+			if strings.Contains(hay, strings.ToLower(t)) {
+				covered++
+			}
+		}
+		sc := relevanceScore(res, terms)
+		if sc > best {
+			best = sc
+		}
+		all = append(all, scoredSrc{src: src, score: sc, covered: covered})
+	}
+	if best == 0 {
+		return sources
+	}
+	half := best / 2
+	kept := make([]map[string]any, 0, len(all))
+	for _, s := range all {
+		if s.covered >= 2 || s.score >= half {
+			kept = append(kept, s.src)
+		}
+	}
+	if len(kept) == 0 {
+		return sources
+	}
+	return kept
+}
+
+func sourceTitle(src map[string]any) string {
+	s, _ := src["title"].(string)
+	return s
+}
+
+func sourceURL(src map[string]any) string {
+	s, _ := src["url"].(string)
+	return s
+}
+
+// retryWithRelaxedQuery re-asks a compound query in a shorter form when the
+// first answer engages the query only through its most generic term.
+//
+// The trigger is a recall failure, not a ranking failure. Bing's public HTML
+// endpoint does not treat "Blender 角色建模 教程" as a conjunction and answers
+// with blender.org landing pages; the same provider answers "Blender 教程"
+// with real tutorials. Post-filtering cannot repair that, because any
+// threshold strict enough to remove the landing pages also empties the set and
+// falls straight back to returning everything.
+//
+// Results from the retry are ranked against the ORIGINAL query, so the user
+// still gets matches for the phrase they typed. The relaxed phrasing only
+// changes how the question is asked of the provider, never how the answer is
+// judged.
+func (t *Tool) retryWithRelaxedQuery(
+	ctx context.Context,
+	originalQuery string,
+	sources []map[string]any,
+	providers []string,
+	maxResults, maxSnippetChars int,
+) ([]map[string]any, []string) {
+	if !answerIsWeak(sources, originalQuery) {
+		return sources, providers
+	}
+	for _, relaxed := range relaxedQueries(originalQuery) {
+		if err := ctx.Err(); err != nil {
+			return sources, providers
+		}
+		results, relaxedProviders, err := t.racer.SearchLimit(ctx, relaxed, maxResults)
+		if err != nil {
+			// One variant failing is not fatal; the next may still work.
+			continue
+		}
+		retrySources, _ := selectSources(results, originalQuery, maxResults, maxSnippetChars)
+		retrySources = filterGenericEcho(retrySources, originalQuery)
+		if len(retrySources) == 0 {
+			continue
+		}
+		return mergeSearchSources(retrySources, sources, maxResults), append(providers, relaxedProviders...)
+	}
+	return sources, providers
 }

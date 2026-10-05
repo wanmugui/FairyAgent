@@ -255,7 +255,9 @@ func TestDefaultConfigsRouteAllSchemasWithoutLegacyExecutables(t *testing.T) {
 				if !ok {
 					t.Fatalf("schema %q is not registered", name)
 				}
-				if backend != BackendLocal && backend != BackendHTTP {
+				// BackendMCP 是与 Local/HTTP 并列的合法 backend（见 tool_runtime.go），
+				// MCP server 的工具同样注册进 registry，不应被判为 unsupported。
+				if backend != BackendLocal && backend != BackendHTTP && backend != BackendMCP {
 					t.Fatalf("schema %q has unsupported backend %q in %s", name, backend, relativePath)
 				}
 			}

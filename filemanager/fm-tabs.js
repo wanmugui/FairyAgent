@@ -1,3 +1,14 @@
+// 路径编码兜底：encodeURIComponent 会把 / 编成 %2F，nginx/Cloudflare 拒绝该形式，
+// 公网表现为「打不开这个文件夹 HTTP 404」。这里按 / 分段编码，斜杠保持原样。
+// index-fm.html 里已有同名实现，此处仅在它尚未加载时兜底，避免依赖脚本执行顺序。
+if (typeof window.encPath !== 'function') {
+  window.encPath = function (p) {
+    if (p === undefined || p === null) return '';
+    return String(p).split('/').map(function (seg) {
+      return encodeURIComponent(seg);
+    }).join('/');
+  };
+}
 // P1-9 多标签页。与目录树正交的一层：标签页只管「当前看哪个目录 + 各自的
 // 滚动位置 + 各自的排序」，不动导航语义。在 fm-upload.js 之后加载。
 //

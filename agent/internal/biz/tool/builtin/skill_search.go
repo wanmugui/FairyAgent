@@ -120,6 +120,22 @@ func readSkillMeta(path string) (string, string) {
 		}
 	}
 	lines := strings.Split(content, "\n")
+	// SKILL.md frontmatter is YAML, not prose: only the description value belongs
+	// in the search text. Concatenating every "key: value" row made name/tags/
+	// triggers noise that polluted skillSearchScore for every local skill.
+	if front, ok := skillFrontmatterLines(lines); ok {
+		for _, line := range front {
+			value, found := strings.CutPrefix(strings.TrimSpace(line), "description:")
+			if !found {
+				continue
+			}
+			desc := strings.TrimSpace(value)
+			desc = strings.Trim(desc, `"'`)
+			if desc != "" {
+				return desc, skillSnippet(content)
+			}
+		}
+	}
 	var description strings.Builder
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
@@ -149,6 +165,21 @@ func readSkillMeta(path string) (string, string) {
 		}
 	}
 	return desc, skillSnippet(content)
+}
+
+// skillFrontmatterLines returns the lines inside a leading "---" fenced YAML
+// block. ok is false when the file has no frontmatter, so callers fall back to
+// scanning the body.
+func skillFrontmatterLines(lines []string) ([]string, bool) {
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return nil, false
+	}
+	for i := 1; i < len(lines); i++ {
+		if strings.TrimSpace(lines[i]) == "---" {
+			return lines[1:i], true
+		}
+	}
+	return nil, false
 }
 
 func skillSnippet(content string) string {

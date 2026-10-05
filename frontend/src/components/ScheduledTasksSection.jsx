@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { CalendarClock, Loader2, Play, RefreshCcw, Trash2 } from 'lucide-react';
+import { CalendarClock, Loader2, Pencil, Play, RefreshCcw, Trash2, X } from 'lucide-react';
 
 /**
  * 定时任务面板。
@@ -49,6 +49,9 @@ export default function ScheduledTasksSection({ onStatus }) {
   const [meta, setMeta] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState('');
+  // 非空表示正在编辑这条任务：表单回填它的字段，保存时走 update 而不是新建。
+  const [editingId, setEditingId] = useState('');
+  const formRef = useRef(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
@@ -98,6 +101,57 @@ export default function ScheduledTasksSection({ onStatus }) {
     return () => { mountedRef.current = false; };
   }, [refresh]);
 
+  // schedule.at 存的是 ISO 字符串，而表单的 datetime-local 要的是本地
+  // "YYYY-MM-DDTHH:mm"，直接塞进去会差一个时区。
+  const toLocalInput = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+      + `T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const resetForm = () => {
+    setEditingId('');
+    setTitle('');
+    setPrompt('');
+    setCommand('');
+    setType('daily');
+    setTime('08:00');
+    setWeekday(1);
+    setMinutes(30);
+    setOnceAt('');
+    setKind('prompt');
+    setNotifyChannel('auto');
+    setNotifyTo('');
+  };
+
+  // 把已存在的任务反向映射回表单字段。之前没有这条路径，想改时间只能删了重建。
+  const startEdit = (task) => {
+    const sch = task.schedule || {};
+    setEditingId(task.id);
+    setTitle(task.title || '');
+    setType(sch.type || 'daily');
+    setTime(sch.type === 'once' ? '08:00' : (sch.at || '08:00'));
+    setWeekday(typeof sch.weekday === 'number' ? sch.weekday : 1);
+    setMinutes(typeof sch.minutes === 'number' ? sch.minutes : 30);
+    setOnceAt(sch.type === 'once' ? toLocalInput(sch.at) : '');
+    setKind(task.action?.kind || 'prompt');
+    setPrompt(task.action?.text || '');
+    setCommand(task.action?.command || '');
+    setNotifyChannel(task.notify?.channel || 'auto');
+    setNotifyTo(task.notify?.conversation_id || '');
+    setMessage(null);
+    // 表单在任务列表上方。不滚过去的话，用户点完「编辑」眼睛还盯着列表，
+    // 会以为没有填入框、也点不到输入框。
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const first = formRef.current?.querySelector('input:not([type=hidden]), textarea, select');
+      if (first) first.focus({ preventScroll: true });
+    });
+  };
+
   const submit = async (event) => {
     event.preventDefault();
     setSaving(true);
@@ -133,21 +187,39 @@ export default function ScheduledTasksSection({ onStatus }) {
       if (kind === 'prompt' && !prompt.trim()) {
         throw new Error('提示词任务需要写清楚要做什么');
       }
-      await callApi('/api/scheduled-tasks', 'POST', {
-        title,
-        schedule,
-        action: kind === 'command'
-          ? { kind: 'command', command: command.trim() }
-          : { kind: 'prompt', text: prompt },
-        notify,
-      });
-      setTitle('');
-      setPrompt('');
-      setCommand('');
-      setMessage({ kind: 'ok', text: '已创建，到点会在当天会话里跑一轮' });
+      const action = kind === 'command'
+        ? { kind: 'command', command: command.trim() }
+        : { kind: 'prompt', text: prompt };
+      // 保留调度器支持、但本表单不编辑的两个字段，否则每次在设置页保存都会被抹掉：
+      //   session —— 支持 {today} 占位符；带 "__" 时走子会话（分支会话）而不是主会话
+      //   guard   —— 闸门脚本；退出码非 0 则不唤醒 agent
+      // 丢了 session 会让定时任务掉回主会话，丢了 guard 会让它无活也空转唤醒。
+      const prevAction = (tasks || []).find((t) => t.id === editingId)?.action || {};
+      if (prevAction.session) action.session = prevAction.session;
+      if (prevAction.guard) action.guard = prevAction.guard;
+      if (editingId) {
+        const updated = await callApi('/api/scheduled-tasks/update', 'POST', {
+          id: editingId,
+          title,
+          schedule,
+          action,
+          notify,
+        });
+        const next = updated?.task?.next_run_text;
+        setMessage({ kind: 'ok', text: next ? `「${title}」已更新，下一次：${next}` : `「${title}」已更新` });
+      } else {
+        await callApi('/api/scheduled-tasks', 'POST', { title, schedule, action, notify });
+      }
+      // resetForm() 会清空 editingId，所以先记住这一轮是不是编辑。
+      const wasEditing = Boolean(editingId);
+      resetForm();
+      // 编辑分支上面已经设过"已更新 + 下一次"，这里别再盖掉它。
+      if (!wasEditing) {
+        setMessage({ kind: 'ok', text: '已创建，到点会在当天会话里跑一轮' });
+      }
       await refresh();
     } catch (err) {
-      setMessage({ kind: 'error', text: err.message || '创建失败' });
+      setMessage({ kind: 'error', text: err.message || (editingId ? '保存失败' : '创建失败') });
     } finally {
       if (mountedRef.current) setSaving(false);
     }
@@ -212,7 +284,7 @@ export default function ScheduledTasksSection({ onStatus }) {
         </div>
       </div>
 
-      <form className="fairy-form" onSubmit={submit}>
+      <form ref={formRef} className={"fairy-form" + (editingId ? " fairy-form--editing" : "")} onSubmit={submit}>
         <div className="fairy-form__row">
           <div className="fairy-field">
             <label className="fairy-field__label" htmlFor="task-title">标题</label>
@@ -365,7 +437,12 @@ export default function ScheduledTasksSection({ onStatus }) {
         <div className="fairy-form__actions">
           <button type="submit" className="fairy-btn fairy-btn--primary" disabled={saving || !title.trim() || (kind === 'command' ? !command.trim() : !prompt.trim())}>
             {saving ? <Loader2 size={14} className="fairy-btn__spin" /> : <CalendarClock size={14} />}
-            <span>{saving ? '创建中…' : '新建定时任务'}</span>
+            <span>{saving ? '创建中…' : editingId ? '编辑定时任务' : '新建定时任务'}</span>
+            {editingId ? (
+              <button type="button" className="fairy-btn fairy-btn--ghost" onClick={resetForm} disabled={saving}>
+                <X size={13} /> <span>取消编辑</span>
+              </button>
+            ) : null}
           </button>
         </div>
       </form>
@@ -400,6 +477,9 @@ export default function ScheduledTasksSection({ onStatus }) {
                   : null}
             </div>
             <div className="fairy-row__control">
+              <button type="button" className="fairy-btn fairy-btn--ghost" disabled={busyId === task.id} onClick={() => startEdit(task)}>
+                <Pencil size={13} /> <span>编辑</span>
+              </button>
               <button type="button" className="fairy-btn fairy-btn--ghost" disabled={busyId === task.id} onClick={() => toggle(task)}>
                 <span>{task.enabled ? '停用' : '启用'}</span>
               </button>

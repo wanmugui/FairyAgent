@@ -28,17 +28,17 @@ priority: 68
 
 | 工具 | 真实位置 | 版本 | 在 PATH？ |
 | --- | --- | --- | --- |
-| Blender | `/tmp/assetpipe/blender-4.5.14-linux-x64/blender` | 4.5.14 LTS | 否 |
-| gltfpack | `/tmp/assetpipe/node_modules/.bin/gltfpack` | 1.3 | 否 |
-| gltf-transform | `/tmp/assetpipe/node_modules/.bin/gltf-transform` | 4.5.1 | 否 |
+| Blender | `/home/user/Fairy/.tools/blender/blender-4.5.14-linux-x64/blender` | 4.5.14 LTS | 否 |
+| gltfpack | `/home/user/Fairy/.tools/blender/node_modules/.bin/gltfpack` | 1.3 | 否 |
+| gltf-transform | `/home/user/Fairy/.tools/blender/node_modules/.bin/gltf-transform` | 4.5.1 | 否 |
 | trimesh | `python3 -c "import trimesh"` | 5.1.0 | 是 |
 | PyMeshLab | — | 未装（镜像限流装不上） | — |
 
 用之前先设 PATH，否则每条命令都得写全路径：
 
 ```bash
-export PATH="/tmp/assetpipe/node_modules/.bin:$PATH"
-BL=/tmp/assetpipe/blender-4.5.14-linux-x64/blender
+export PATH="/home/user/Fairy/.tools/blender/node_modules/.bin:$PATH"
+BL=/home/user/Fairy/.tools/blender/blender-4.5.14-linux-x64/blender
 ```
 
 `/tmp` 会被清空。真要长期用，把这些重装到 `/opt` 或用户目录，别指望 `/tmp`。
@@ -109,8 +109,8 @@ gltf-transform optimize in.glb out.glb --compress quantize && test -s out.glb \
 ## 验收命令（可直接抄）
 
 ```bash
-export PATH="/tmp/assetpipe/node_modules/.bin:$PATH"
-BL=/tmp/assetpipe/blender-4.5.14-linux-x64/blender
+export PATH="/home/user/Fairy/.tools/blender/node_modules/.bin:$PATH"
+BL=/home/user/Fairy/.tools/blender/blender-4.5.14-linux-x64/blender
 
 # 几何体检 + DECIMATE + UV 状态，一次跑完
 $BL --background --python blender_check.py -- in.glb out.glb
@@ -156,6 +156,7 @@ $BL --background --python blender_check.py -- in.glb out.glb
 | 项 | 判据 | 常见翻车 |
 | --- | --- | --- |
 | **真实尺度** | 1 单位 = 1 米。人 1.7、门 2.0、桌 0.75 | AI 输出尺寸离谱且**不报错**——能加载能渲染，只是小如沙粒或大如山 |
+| **原点对齐** | 脚底贴世界原点（z=0）、up=+Z、变换已应用（scale=1/loc=0/rot=0）、无负缩放 | 模型悬空或陷进地面，导入后要手动挪 |
 | UV | 已展开，**无重叠**，seam 位置在隐蔽处（腋下、裆缝内侧） | 未展开或严重重叠，贴图糊成一片 |
 | 贴图五件套 | albedo / normal / roughness / metallic / AO 齐全且分辨率一致 | 只有一张 diffuse，引擎里像塑料 |
 | 色彩空间 | albedo 用 sRGB；normal/roughness/metallic/AO 用线性 | 贴图发灰或法线全错 |
@@ -164,6 +165,23 @@ $BL --background --python blender_check.py -- in.glb out.glb
 | 面数 | 在目标预算内（手游 5-15k、三角 30-100k、PC 影视不限） | AI 默认常在 10 万以上 |
 | 命名 | 与源文件同名、材质前缀统一、无 `Cube.001` | 从 Blender 默认名带出来的 |
 | 导出 | 按目标引擎选格式 | 见下表 |
+
+**真实尺度 / 原点对齐这两条要跑脚本复核，不要靠眼睛估。** 复核脚本：
+`workspace/check_real_scale.py`，逐条打印 PASS/WARN/FAIL（身高 vs 目标、脚底 z、
+up 轴、变换已应用、无负缩放、有符号体积判法线朝外、比例自洽、朝向），
+并按真实米制把门 2.0 / 桌 0.75 / 标尺摆进场景渲对照图——纯看数字挡不住
+"看起来小如沙粒"。
+
+三个实测踩过的坑：
+
+- **别用「包围盒最高边 > 水平边」判 up 轴**。T-pose 下手臂水平展开，包围盒宽
+  1.602m 几乎等于身高 1.647m，这条判据天然失效（A-pose/垂臂才成立）。
+  改用与姿势无关的量：**身高 vs 进深**（手臂沿 X 展开，不影响 Y 向进深）。
+- **取景本身要先验覆盖范围**。50mm 镜头在 3.6m 处横向只覆盖 2.59m，
+  而参照物从门到标尺要跨 4.4m，结果门几乎全在画框外、标尺根本没进画面——
+  等于没验。渲之前按 `D = 横向跨度 / (2 × 18 / 焦距)` 算好距离。
+- 判定容差（±5% PASS / 5~15% WARN / >15% FAIL）由脚本自带并会打印，
+  上表的 1.7/2.0/0.75 是参考值、原文没给容差，别把 PASS 当成 skill 原话。
 
 ## 导出格式选择
 

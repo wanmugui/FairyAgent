@@ -1176,6 +1176,15 @@
 }
 
 /* Form */
+/* 编辑已有定时任务时，表单本身要一眼可辨：描边 + 轻微底色，
+   否则「保存」和「创建」两个按钮挨在一起容易点错。 */
+.fairy-form--editing {
+  border-color: var(--fairy-accent, #5b8cff);
+  background: var(--fairy-accent-soft, rgba(91, 140, 255, 0.06));
+  box-shadow: 0 0 0 3px var(--fairy-accent-soft, rgba(91, 140, 255, 0.12));
+  border-radius: 10px;
+}
+
 .fairy-form { display: flex; flex-direction: column; gap: 10px; }
 .fairy-form__row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .fairy-form__actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }

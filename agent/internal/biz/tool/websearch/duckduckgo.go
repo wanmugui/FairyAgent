@@ -14,8 +14,8 @@ import (
 // requests/minute per IP, so callers should debounce. Inspired by dsh's
 // approach of treating HTML providers as a fallback transport.
 type DuckDuckGoProvider struct {
-	client    *http.Client
-	recent    bool
+	client *http.Client
+	recent bool
 }
 
 func NewDuckDuckGoProvider(client *http.Client) *DuckDuckGoProvider {
@@ -32,6 +32,19 @@ func (p *DuckDuckGoProvider) WithRecent(recent bool) *DuckDuckGoProvider {
 	return p
 }
 
+// ddgEndpoint is the DDG HTML form endpoint. It is a variable so tests can
+// point the provider at a local server and assert on the outgoing request.
+var ddgEndpoint = "https://html.duckduckgo.com/html/"
+
+// ddgRegion maps a query to DDG's kl region hint. CJK queries get the Chinese
+// region so DDG does not restrict results to the US.
+func ddgRegion(query string) string {
+	if hasCJK(query) {
+		return "cn-zh"
+	}
+	return "us-en"
+}
+
 func (p *DuckDuckGoProvider) Name() string { return "duckduckgo_html" }
 
 func (p *DuckDuckGoProvider) Search(ctx context.Context, query string, n int) ([]SearchResult, error) {
@@ -40,20 +53,26 @@ func (p *DuckDuckGoProvider) Search(ctx context.Context, query string, n int) ([
 	}
 	form := url.Values{}
 	form.Set("q", query)
-	form.Set("kl", "us-en")
+	// Region hint must follow the query script. Hardcoding us-en makes a CJK
+	// query return US-only results, which is the same defect that was fixed on
+	// the Bing provider: the query's own language decides the market.
+	form.Set("kl", ddgRegion(query))
 	if p.recent {
 		// df=d constrains DDG HTML to "Past day" results. The wire format is
 		// intentionally raw: DDG's HTML form endpoint ignores prettier values.
 		form.Set("df", "d")
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://html.duckduckgo.com/html/", strings.NewReader(form.Encode()))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, ddgEndpoint, strings.NewReader(form.Encode()))
 	if err != nil {
 		return nil, fmt.Errorf("build ddg request: %w", err)
 	}
 	req.Header.Set("User-Agent", defaultUserAgent)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
+	if hasCJK(query) {
+		req.Header.Set("Accept-Language", "zh-CN,zh;q=0.9,en;q=0.8")
+	}
 
 	resp, err := p.client.Do(req)
 	if err != nil {

@@ -33,18 +33,18 @@ priority: 70
 
 ## 路线选择：默认本机，云端按需手动开
 
-**默认走本机路线，不烧额度。** 云端 Tripo 已降级为手动开关，需要时显式开启。
+**三视图生成全程本地**，用 `image_generate` 一次出图再裁三块，不烧任何额度。
 
 ### 默认：本机路线
 
-1. `image_generate` 一次出三视图（见下方「关键手法：一次出图，再裁切」）
-2. 建模走本机 TripoSR（`generating-3d-models` 的本地路径，CPU 约 27 s/个，免费离线）
+1. `image_generate` 一次出三视图（见下方「关键手法：一次出图，再裁三块」）
+2. 建模走 Blender 真实建模（`generating-3d-models` 的主路线，全程离线，不依赖任何权重或云端 key）
 
-出图侧**支持参考图**——`threeview.py --ref-url <公网URL>` 会带上 MiniMax
+出图侧**支持参考图**——`../3d-asset-pipeline/scripts/threeview.py --ref-url <公网URL>` 会带上 MiniMax
 `subject_reference`（`type=character`，`fidelity=0.8`）锁住角色：
 
 ```bash
-python3 threeview.py --desc "..." -o out/char --ref-url https://<图床>/ref.png
+cd ../3d-asset-pipeline/scripts && python3 threeview.py --desc "..." -o out/char --ref-url https://<图床>/ref.png
 ```
 
 **唯一限制是 `subject_reference` 只收公网 URL**：裸 base64 和 `data:image/...;base64,`
@@ -55,33 +55,41 @@ python3 threeview.py --desc "..." -o out/char --ref-url https://<图床>/ref.png
 但那是**工具 schema 的限制，不是 MiniMax 出图能力的限制**。
 别因为工具不支持就以为整条链路只能文生图——脚本路径是通的。
 
-代价要说清楚：本机 TripoSR **只吃单图**，三视图要自己挑一张喂。
+三视图的用途是**定比例与结构关系**，供 Blender 建模时对齐；
+不要拿它量尺寸，也不要直接当测量依据。
 
-### 手动开关：云端 Tripo
+### 手动开关：云端 Tripo —— 已下线
 
-**默认关闭。** 只有主人明确要求"用云端 / 出精修件 / 不在乎额度"时才开。
+> ⚠️ **本段能力已按需求停用，不要执行。**
+> Tripo 云端 API 与本地 TripoSR 两条图像推断路线均已从 `generating-3d-models` 移除，
+> 相关脚本已归档到该 skill 的 `.retired/`。当前唯一可用路线是 **Blender 真实建模**。
 
-```bash
-TRIPO_CLOUD=1 tripo generate image-to-multiview concept.png -o <输出目录> --json --no-open
-```
+### 三视图之后的建模：走 Blender，不再走云端
 
-它基于几何理解生成视图，**背面不是靠提示词脑补**，然后 `multiview-to-model`
-直接吃这套视图形成闭环——这是云端唯一真正不可替代的价值，别的都别夸大。
+> ⚠️ **Tripo 云端路线已下线，不要尝试。**
+> `TRIPO_CLOUD=1 tripo generate image-to-multiview` 依赖 `~/.tripo` 凭证与云端 key，
+> 当前不可用。凭证文件保留在 `~/.tripo/config.json` / `~/.tripo_key_cn` / `~/.tripo_key_ov`，
+> CLI 在 `~/.local/bin/tripo`，但**不要**再依赖这条路径。
 
-凭证保留不删：`~/.tripo/config.json`、`~/.tripo_key_cn`、`~/.tripo_key_ov`。
-CLI 在 `~/.local/bin/tripo`。要切回来只需带上 `TRIPO_CLOUD=1`。
+三视图的**作用不变**：定比例关系和服装结构，供 Blender 建模时对齐。
 
-→ **REQUIRED SUB-SKILL:** 建模用 `generating-3d-models`
+> ⚠️ **扩散模型出的三视图不保证正交投影下几何闭合，不要拿它量尺寸。**
+> 它给的是"大致比例"和"结构关系"，具体数值在建模时按人体测量表自己定。
 
-### 关键手法：一次出图，再裁切
+建模路线与坑见 `generating-3d-models`——里面记了 voxel remesh 静默删除部件、
+无头环境笔刷不可用这两个实测结论。
+
+→ **REQUIRED SUB-SKILL:** 建模用 `generating-3d-models`（Blender 真实建模）
+
+### 关键手法：优先用参考图锁角色
 
 `image_generate` **工具**走 MiniMax `image-01`，`image_paths` 明确不支持，所以工具层只能文生图。
-但 `scripts/threeview.py --ref-url` 用的是 MiniMax `subject_reference`，**参考图能力是有的**。
+但 `../3d-asset-pipeline/scripts/threeview.py --ref-url` 用的是 MiniMax `subject_reference`，**参考图能力是有的**。
 
 **有公网参考图时优先用 `--ref-url` 锁角色**；只有拿不到公网 URL 时，
 才退到"一次出图再裁切"这套纯文生图打法。
 
-### 关键手法：一次出图，再裁切
+### 关键手法：一次出图，再裁三块
 
 **既然不能喂参考图，那就让三个视图在同一次生成里产生——身份天然一致。**
 
@@ -154,7 +162,7 @@ CLI 在 `~/.local/bin/tripo`。要切回来只需带上 `TRIPO_CLOUD=1`。
 
 ## 参考
 
-- **REQUIRED SUB-SKILL:** 建模用 `generating-3d-models`（默认本机 TripoSR；云端多视图端点需 `TRIPO_CLOUD=1` 手动开）
+- **REQUIRED SUB-SKILL:** 建模用 `generating-3d-models`（Blender 真实建模，本机离线跑通）
 - **REQUIRED SUB-SKILL:** 资产化与导出用 `finalizing-3d-assets`
 - **REQUIRED SUB-SKILL:** 起点路线判定用 `planning-3d-asset-pipeline`
 - 定价与能力为 2026-10 调研值，**用前复核**；Qwen 单价当时未取到，商用条款未逐条核实

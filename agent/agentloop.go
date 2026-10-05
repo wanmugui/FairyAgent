@@ -1321,6 +1321,13 @@ func RunAgentLoopCtx(
 			workingMsgs = insertDynamicSkillSystemMessage(workingMsgs, skillContext)
 		}
 	}
+	// 用户上传的图片此前只是以 <file_context> JSON 拼在消息文本里，模型只能
+	// 拿到一个文件路径，想看图就只能绕道 image_vqa 再问一次另一个模型 ——
+	// 既慢又丢信息。这里把图片转成真正的 image_url 视觉附件直接挂到本轮，
+	// 主模型像看工具截图一样直接看图；image_vqa 退回纯文本模型兜底的定位。
+	if visionMsg, ok := userUploadVisionContextMessage(cfg, workingMsgs); ok {
+		workingMsgs = append(workingMsgs, visionMsg)
+	}
 
 	perMsgUsage := make(map[int]*PerMsgUsageEntry)
 	postReflection := false           // Track if reflection has been injected

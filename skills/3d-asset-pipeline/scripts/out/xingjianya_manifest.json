@@ -1,0 +1,68 @@
+{
+  "sheet_size": [
+    1280,
+    720
+  ],
+  "bands": [
+    [
+      70,
+      366
+    ],
+    [
+      648,
+      776
+    ],
+    [
+      962,
+      1196
+    ]
+  ],
+  "panels": {
+    "front": {
+      "path": "out/xingjianya_front.png",
+      "size": [
+        296,
+        720
+      ],
+      "band": [
+        70,
+        366
+      ],
+      "bytes": 164019
+    },
+    "side": {
+      "path": "out/xingjianya_side.png",
+      "size": [
+        128,
+        720
+      ],
+      "band": [
+        648,
+        776
+      ],
+      "bytes": 83036
+    },
+    "back": {
+      "path": "out/xingjianya_back.png",
+      "size": [
+        234,
+        720
+      ],
+      "band": [
+        962,
+        1196
+      ],
+      "bytes": 113317
+    }
+  },
+  "panel_widths": {
+    "front": 296,
+    "side": 128,
+    "back": 234
+  },
+  "side_narrower_than_front": true,
+  "prompt": "a young woman anime game character, long straight cream-white silver hair past the waist with thick side-swept bangs, amber golden eyes, black diamond-cone horn hair accessories at the temples, white high-collar top with pale grey-violet scroll embroidery, black outer robe draped over the shoulders, flowing light grey-white long coat-dress with wide sleeves, dark grey diagonal waist sash, red knotted cord tassel with orange-red bead. anime game character, cel shaded, full body, no background props. A three-view character model sheet on a pure white background. Exactly three separate full-body figures, evenly spaced in one row, all the same height, standing on the same ground line, all wearing the identical costume with identical hair and colors. Left figure shows the FRONT of the character facing the viewer. Middle figure shows the character in SIDE PROFILE facing left. Right figure shows the BACK of the character, we see the back of her head and her back, not her face. Plain orthographic views, flat even studio lighting, no shadows, absolutely no text, no letters, no numbers, no labels, no watermark, no signature, no border.",
+  "aspect_ratio": "16:9",
+  "used_subject_reference": false,
+  "attempts_used": 1
+}

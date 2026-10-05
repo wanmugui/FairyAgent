@@ -1,3 +1,14 @@
+// 路径编码兜底：encodeURIComponent 会把 / 编成 %2F，nginx/Cloudflare 拒绝该形式，
+// 公网表现为「打不开这个文件夹 HTTP 404」。这里按 / 分段编码，斜杠保持原样。
+// index-fm.html 里已有同名实现，此处仅在它尚未加载时兜底，避免依赖脚本执行顺序。
+if (typeof window.encPath !== 'function') {
+  window.encPath = function (p) {
+    if (p === undefined || p === null) return '';
+    return String(p).split('/').map(function (seg) {
+      return encodeURIComponent(seg);
+    }).join('/');
+  };
+}
 // P1-5 前端续传上传器。在 fm-lock.js 之后加载。
 //
 // 【为什么覆盖而不是改 index-fm.html 里的 upload()】第 705 行是

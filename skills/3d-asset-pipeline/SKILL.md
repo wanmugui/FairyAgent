@@ -1,6 +1,6 @@
 ---
 name: 3d-asset-pipeline
-description: Use when 需要把一张图或一段文字变成可交付的 3D 素材或短视频：图片→三视图→网格(glb/obj)→图生视频(mp4) 全链路，用本机 TripoSR + MiniMax 出图/视频，可离线跑、不按张数花钱。触发场景：「把图转成 3D」「出三视图再建模」「图生视频」「整条素材链跑一遍」「3D 素材流水线」。
+description: Use when 需要把一张图或一段文字变成可交付的 3D 素材或短视频：图片→三视图→网格(glb/obj)→图生视频(mp4) 全链路。网格环节走 Blender 真实建模（按参考图比例用基本体搭建），图像推断路线已下线。触发场景：「把图转成 3D」「出三视图再建模」「图生视频」「整条素材链跑一遍」「3D 素材流水线」。
 tags:
   - 3d
   - pipeline
@@ -62,22 +62,29 @@ python3 threeview.py --desc "Hoshimi Miyabi, very dark blue-black hair with thic
 
 回归测试：`python3 scripts/test_detect_bands.py`（4 张已知图，锁住 accept/reject 行为）。
 
-### 2. 单图 → 3D 网格（本机 TripoSR，CPU，不花钱）
+### 2. 单图 → 3D 网格（Blender 真实建模）
+
+> ⚠️ **本机图像推断路线已下线。** `to3d.py` / `local_triposr.py` 依赖的权重文件不存在，
+> 依赖它们的步骤一律不要尝试。云端生成 API 同样不可用（需 key，且出图不可控、成本不可预知）。
+>
+> 替代路线是**按参考图比例在 Blender 里真实建模**——可控、可复现、可直接交付。
+
+三视图只用来**定比例关系和服装结构**，不要拿它量尺寸（扩散模型出的三视图不保证正交投影下几何闭合）。
 
 ```bash
-python3 to3d.py --image out/miyabi_front.png -o out/miyabi
+# 以参考脚本为起点，按你的参考图调整比例后建模
+python3 skills/sculpting-character-pipeline/references/blockout-character.py
 ```
 
-- **必须抠背景**，默认 `--remove-bg` 开。不抠的话白底会被重建成一圈"托盘"状多余几何。
-- 抠完自动裁紧主体再补成正方形，TripoSR 对输入构图敏感，别丢一张空白很多的图给它。
-- **导出的网格默认是躺着的**：TripoSR 原始输出长轴在 X 上（实测 ext≈`[0.98, 0.58, 0.30]`）。
-  脚本默认 `--orient stand` 绕 Z 转 90° 立起来（实测四种旋转里只有这个方向得到直立人形）。
-  `--orient y_up` 是通用兜底（自动把最长轴立成 Y），`--orient raw` 保留躺姿。
-- 吃 `out/miyabi_sheet.png` 时加 `--view front|side|back` 自动裁块。
-- CPU 上 resolution=256 够用；要更细就调大，会明显变慢。
-- **要后处理（去碎片 / 减面 / 平滑）就改用** `skills/generating-3d-models/scripts/local_triposr.py`
-  ——那是本机建模的**规范实现**，带网格体检报告和回归测试。本目录的 `to3d.py` 是链路里的轻量版，
-  两者在抠图和导出朝向这两个关键行为上保持一致。
+改哪里：脚本里的 `H_CHEST` / `H_WAIST` / `H_HIP` / `H_KNEE` 等高度常量决定比例，
+`VIEWS` 三个机位渲正/侧/3-4 视角。
+
+- **实体验证**：30+ 基本体搭出 1.70m 人形，131K 顶点，包围盒 `z[0.004..1.651]`（脚到头顶完整）；
+  像素检测到颈部收窄 70px、腰部 108px，三视角均确认人形可辨。
+- **建模前先读** `skills/generating-3d-models/SKILL.md`，里面记了两个会静默毁掉模型的坑：
+  ① voxel remesh 会**无声删除**不连通的体块（实测一次只剩一个头，不报错）；
+  ② 无头环境笔刷雕刻 `brush` 是 read-only，只能用程序化置换。
+- **渲完必须看图**，并用包围盒验证部件存活。文件非空、顶点数达标**都不算验证**。
 
 ### 3. 图 → 视频（mp4）
 
@@ -104,7 +111,7 @@ python3 to_video.py --image out/miyabi_front.png -o out/miyabi.mp4 \
 ```bash
 cd scripts
 python3 threeview.py --desc "$DESC" -o out/char
-python3 to3d.py     --image out/char_front.png -o out/char
+python3 ../sculpting-character-pipeline/references/blockout-character.py   # Blender 真实建模
 python3 to_video.py --image out/char_front.png -o out/char.mp4 --prompt "$MOTION"
 ```
 
@@ -156,5 +163,6 @@ status_code=1000  disallowed image url: localhost or private address not allowed
 | 三视图有字 | 少了 "no text, no letters..." 那段 |
 | 网格是躺着的 | 用了 `--orient raw`；默认 `stand` 会立起来 |
 | 网格带一圈托盘 | 没抠背景，加 `--remove-bg`（默认已开） |
-| `找不到 TripoSR` | 用 `--triposr /path/to/triposr` 指定 |
+| `模型只剩一个头` | voxel remesh 删掉了不连通的体块，改成逐件 remesh + join，见 `generating-3d-models` 阶段 2 |
+| `找不到 4.5.14` | 路径应为 `/home/user/Fairy/.tools/blender/`；若确实缺失，改用 bpyenv 的 5.1.0，结论不变 |
 | 视频一直 Processing | 正常，6 秒 768P 通常要几分钟；`--interval` 别调到 5 秒以下 |

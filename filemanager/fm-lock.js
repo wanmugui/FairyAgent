@@ -1,3 +1,14 @@
+// 路径编码兜底：encodeURIComponent 会把 / 编成 %2F，nginx/Cloudflare 拒绝该形式，
+// 公网表现为「打不开这个文件夹 HTTP 404」。这里按 / 分段编码，斜杠保持原样。
+// index-fm.html 里已有同名实现，此处仅在它尚未加载时兜底，避免依赖脚本执行顺序。
+if (typeof window.encPath !== 'function') {
+  window.encPath = function (p) {
+    if (p === undefined || p === null) return '';
+    return String(p).split('/').map(function (seg) {
+      return encodeURIComponent(seg);
+    }).join('/');
+  };
+}
 // P1-10 编辑锁（前端层）。在 fm-p3.js 之后加载。
 //
 // 【为什么不直接改 index-fm.html 里的 openMd/savMd】它们各被复制了 5 份
@@ -120,7 +131,7 @@ window.savMd = async function () {
   if (lk && lk.readOnly) { _lockToast('当前是只读，不能保存', true); return; }
   if (!confirm('保存?')) return;
   const p = window.mdp;
-  let url = LOCK_API + '/file?path=' + encodeURIComponent(p);
+  let url = LOCK_API + '/file?path=' + encPath(p);
   if (lk && lk.token) url += '&lock=' + encodeURIComponent(lk.token);
   let r;
   try { r = await fetch(url, { method: 'PUT', body: document.getElementById('mdx').value }); }

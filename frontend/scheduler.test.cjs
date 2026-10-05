@@ -358,3 +358,103 @@ test("a guard that passes leaves the task running as before", async () => {
   assert.equal(scheduler.loadStore(file).tasks[0].last_status, "ok");
   assert.equal(scheduler.loadStore(file).tasks[0].run_count, 1);
 });
+
+// --- update: 编辑已存在的任务（设置页「编辑」按钮走的就是这条） ------------
+
+// 把 next_run_at 换算成上海本地时刻，方便断言"下一次真的改到点了"。
+function atShanghai(nextRunAt) {
+  return new Date(nextRunAt + SHANGHAI);
+}
+
+test("updateTask rewrites the schedule and recomputes next_run_at", () => {
+  const file = tempStore();
+  const created = scheduler.createTask(file, {
+    owner: 1,
+    title: "早报",
+    schedule: { type: "daily", at: "08:00" },
+    action: { kind: "prompt", text: "给我今天要看的新闻" },
+    notify: null,
+  });
+  const before = atShanghai(created.next_run_at);
+  assert.equal(before.getUTCHours(), 8);
+
+  const updated = scheduler.updateTask(file, 1, created.id, {
+    schedule: { type: "daily", at: "09:30" },
+  });
+  assert.equal(updated.schedule.type, "daily");
+  assert.equal(updated.schedule.at, "09:30");
+  const after = atShanghai(updated.next_run_at);
+  assert.equal(after.getUTCHours(), 9);
+  assert.equal(after.getUTCMinutes(), 30);
+  // 只改时间不应把标题和动作弄丢
+  assert.equal(updated.title, "早报");
+  assert.equal(updated.action.text, "给我今天要看的新闻");
+});
+
+test("updateTask recomputes next_run_at when the weekday changes", () => {
+  const file = tempStore();
+  const created = scheduler.createTask(file, {
+    owner: 1,
+    title: "周报",
+    schedule: { type: "weekly", at: "17:00", weekday: 1 },
+    action: { kind: "prompt", text: "整理这周进展" },
+    notify: null,
+  });
+  const updated = scheduler.updateTask(file, 1, created.id, {
+    schedule: { type: "weekly", at: "17:00", weekday: 5 },
+  });
+  assert.equal(updated.schedule.weekday, 5);
+  // 下一个周五：day 0=周日, 5=周五
+  const next = atShanghai(updated.next_run_at).getUTCDay();
+  assert.equal(next, 5);
+});
+
+test("updateTask keeps a disabled task disabled", () => {
+  const file = tempStore();
+  const created = scheduler.createTask(file, {
+    owner: 1,
+    title: "停掉的任务",
+    schedule: { type: "daily", at: "08:00" },
+    action: { kind: "prompt", text: "x" },
+    notify: null,
+  });
+  scheduler.updateTask(file, 1, created.id, { enabled: false });
+  const edited = scheduler.updateTask(file, 1, created.id, {
+    schedule: { type: "daily", at: "20:00" },
+  });
+  assert.equal(edited.enabled, false, "改时间不应该顺带把任务重新启用");
+});
+
+test("updateTask refuses ids that do not exist or belong to another owner", () => {
+  const file = tempStore();
+  const created = scheduler.createTask(file, {
+    owner: 1,
+    title: "我的任务",
+    schedule: { type: "daily", at: "08:00" },
+    action: { kind: "prompt", text: "x" },
+    notify: null,
+  });
+  assert.equal(scheduler.updateTask(file, 1, "no-such-id", { title: "x" }), null);
+  // 别人的任务不能改，否则知道 id 就能跨用户改别人任务
+  assert.equal(scheduler.updateTask(file, 2, created.id, { title: "被劫持" }), null);
+  assert.equal(scheduler.listTasks(file, 1)[0].title, "我的任务");
+});
+
+test("validateTask rejects a schedule the update endpoint cannot accept", () => {
+  assert.match(
+    scheduler.validateTask({
+      title: "坏时间",
+      schedule: { type: "daily", at: "99:99" },
+      action: { kind: "prompt", text: "x" },
+    }).error,
+    /HH:MM/,
+  );
+  assert.match(
+    scheduler.validateTask({
+      title: "未知类型",
+      schedule: { type: "fortnightly", at: "08:00" },
+      action: { kind: "prompt", text: "x" },
+    }).error,
+    /类型|不支持|未知/,
+  );
+});

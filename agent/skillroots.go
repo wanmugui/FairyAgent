@@ -23,6 +23,7 @@ func userLevelSkillRoots() []string {
 		return nil
 	}
 	candidates := []string{
+		filepath.Join(home, ".fairy", "skills"),
 		filepath.Join(home, ".agents", "skills"),
 		filepath.Join(home, ".claude", "skills"),
 	}

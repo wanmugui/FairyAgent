@@ -14,8 +14,8 @@ import (
 // Quality varies: usually the top 5 results are clean, the rest are ads /
 // "people also ask" widgets. We target <li class="b_algo"> entries.
 type BingPublicProvider struct {
-	client    *http.Client
-	recent    bool // when true, the search is restricted to recent results
+	client *http.Client
+	recent bool // when true, the search is restricted to recent results
 }
 
 func NewBingPublicProvider(client *http.Client) *BingPublicProvider {
@@ -32,6 +32,27 @@ func (p *BingPublicProvider) WithRecent(recent bool) *BingPublicProvider {
 	return p
 }
 
+// bingEndpoint is the upstream search URL. It is a variable so tests can point
+// the provider at a local server and assert on the outgoing request.
+var bingEndpoint = "https://www.bing.com/search"
+
+// hasCJK reports whether s contains CJK ideographs or kana. Such a query must
+// be sent with a Chinese market and language hint; sending it as en-US makes
+// Bing fall back to matching only the latin substrings.
+func hasCJK(s string) bool {
+	for _, r := range s {
+		switch {
+		case r >= 0x4E00 && r <= 0x9FFF, // CJK unified ideographs
+			r >= 0x3400 && r <= 0x4DBF, // extension A
+			r >= 0x3040 && r <= 0x30FF, // kana
+			r >= 0xAC00 && r <= 0xD7AF, // hangul syllables
+			r >= 0xF900 && r <= 0xFAFF: // compatibility ideographs
+			return true
+		}
+	}
+	return false
+}
+
 func (p *BingPublicProvider) Name() string { return "bing_public_html" }
 
 func (p *BingPublicProvider) Search(ctx context.Context, query string, n int) ([]SearchResult, error) {
@@ -43,23 +64,34 @@ func (p *BingPublicProvider) Search(ctx context.Context, query string, n int) ([
 	// otherwise be missing for an anonymous fetch.
 	q := url.Values{}
 	q.Set("q", query)
-	q.Set("cc", "US")
-	q.Set("mkt", "en-US")
-	q.Set("setlang", "en-US")
+	// Market, language and region must follow the query's own script. Hardcoding
+	// en-US made Bing treat a CJK query as a vague English-entity lookup: it
+	// matched only the latin token ("Blender 角色建模 教程" -> blender.org download
+	// pages) and dropped everything else. Same for an unrelated query, which came
+	// back as dictionary definitions of the first word.
+	mkt, setlang, acceptLang := "en-US", "en-US", "en-US,en;q=0.9"
+	cc := "US"
+	if hasCJK(query) {
+		mkt, setlang, acceptLang = "zh-CN", "zh-CN", "zh-CN,zh;q=0.9,en;q=0.8"
+		cc = "CN"
+	}
+	q.Set("cc", cc)
+	q.Set("mkt", mkt)
+	q.Set("setlang", setlang)
 	if p.recent {
 		// qdr=d constrains Bing to "Past 24 hours" results, which is the
 		// closest you get to "today" with the public HTML endpoint.
 		q.Set("qdr", "d")
 		q.Set("filters", "ex1%3a%22ez5_%22")
 	}
-	endpoint := "https://www.bing.com/search?" + q.Encode()
+	endpoint := bingEndpoint + "?" + q.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
 	if err != nil {
 		return nil, fmt.Errorf("build bing request: %w", err)
 	}
 	req.Header.Set("User-Agent", defaultUserAgent)
 	req.Header.Set("Accept", "text/html,application/xhtml+xml")
-	req.Header.Set("Accept-Language", "en-US,en;q=0.9")
+	req.Header.Set("Accept-Language", acceptLang)
 
 	resp, err := p.client.Do(req)
 	if err != nil {

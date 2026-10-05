@@ -1,0 +1,13 @@
+=== MMD/mocap 工具探测 2026-10-04T12:52:30+08:00 ===
+mmpose: MISSING
+mediapipe: MISSING
+mmd: MISSING
+pmd: MISSING
+pmx: MISSING
+vmd: MISSING
+miku_mmd: MISSING
+=== GLB 是否含骨骼 ===
+scene type: Scene
+geometry: ['geometry_0']
+graph nodes: ['world', 'geometry_0']
+is Scene with nodes? True

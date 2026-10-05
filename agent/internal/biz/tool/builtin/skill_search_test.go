@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"os"
+	"strings"
 	"path/filepath"
 	"testing"
 )
@@ -53,5 +54,48 @@ func writeSkillFile(t *testing.T, path, content string) {
 	}
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// readSkillMeta must return the frontmatter description only. The previous
+// implementation skipped lines starting with "---" but kept every "key: value"
+// line, so results[].Description was polluted with name:/tags:/triggers: rows.
+func TestReadSkillMetaReturnsFrontmatterDescriptionOnly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "SKILL.md")
+	content := "---\n" +
+		"name: sample-skill\n" +
+		"description: Use when 处理三维资产导出。触发：「导出 GLB」。\n" +
+		"priority: 70\n" +
+		"tags:\n" +
+		"  - 3d\n" +
+		"  - glb\n" +
+		"triggers:\n" +
+		"  - 导出 GLB\n" +
+		"---\n" +
+		"\n# sample-skill\n\n正文。\n"
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	desc, _ := readSkillMeta(path)
+	want := "Use when 处理三维资产导出。触发：「导出 GLB」。"
+	if desc != want {
+		t.Fatalf("description polluted\n got: %q\nwant: %q", desc, want)
+	}
+	for _, leak := range []string{"name:", "priority:", "tags:", "triggers:", "sample-skill"} {
+		if strings.Contains(desc, leak) {
+			t.Fatalf("description leaked %q: %q", leak, desc)
+		}
+	}
+}
+
+// A body description (no frontmatter) must keep working.
+func TestReadSkillMetaFallsBackToBody(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "SKILL.md")
+	if err := os.WriteFile(path, []byte("# body-skill\n生成结构化报告。\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	desc, _ := readSkillMeta(path)
+	if desc != "生成结构化报告。" {
+		t.Fatalf("body fallback broken: %q", desc)
 	}
 }

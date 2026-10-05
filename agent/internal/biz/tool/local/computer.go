@@ -82,6 +82,15 @@ func (t *localComputerTool) Execute(ctx context.Context, invocation ToolInvocati
 	if err != nil {
 		return localErrorResult(t.name, err), nil
 	}
+	// Normal single-image viewing: action=screenshot with image_path=<file> attaches
+	// that file straight into the model context (vision_context.go injects it and the
+	// main model looks at it natively) — no extra VQA round trip. Batch/parallel work
+	// still goes through image_vqa so many images never crowd the context.
+	if action == "screenshot" {
+		if requested := strings.TrimSpace(localStringArg(args, "image_path")); requested != "" {
+			return t.attachmentForLocalImage(localContext.Workspace, requested)
+		}
+	}
 	// Pixel based actions (OCR / YOLO) have no accessibility tree to read, so
 	// they are served by the local vision service instead of the Windows broker.
 	if isVisionAction(action) {
@@ -326,6 +335,39 @@ func (t *localComputerTool) prepareRequest(action string, args map[string]any, w
 		}
 	}
 	return request, nil
+}
+
+// attachmentForLocalImage turns a workspace-relative or absolute image path into a
+// ToolResult carrying that file as an image attachment, so vision_context.go can
+// inject it into the main model context for native (no-extra-API) viewing.
+func (t *localComputerTool) attachmentForLocalImage(workspace, requested string) (ToolResult, error) {
+	if isHTTPURL(requested) {
+		return localErrorResult(t.name, fmt.Errorf("image_path must be a local file for native viewing; use image_vqa for remote URLs")), nil
+	}
+	resolved := requested
+	if !filepath.IsAbs(resolved) {
+		if workspace == "" {
+			return localErrorResult(t.name, fmt.Errorf("relative image_path %q needs an agent workspace", requested)), nil
+		}
+		resolved = filepath.Join(workspace, resolved)
+	}
+	info, err := os.Stat(resolved)
+	if err != nil {
+		return localErrorResult(t.name, fmt.Errorf("image_path is unavailable: %w", err)), nil
+	}
+	if info.IsDir() {
+		return localErrorResult(t.name, fmt.Errorf("image_path is a directory: %s", resolved)), nil
+	}
+	return ToolResult{
+		Value: map[string]any{
+			"tool":  t.name,
+			"ok":    true,
+			"path":  resolved,
+			"bytes": info.Size(),
+			"note":  "local image attached to the vision context; inspect it directly, do not call image_vqa",
+		},
+		Attachments: []ToolAttachment{{Path: resolved, MIME: "image/png", SizeBytes: info.Size(), Label: "local image"}},
+	}, nil
 }
 
 func isHTTPURL(value string) bool {

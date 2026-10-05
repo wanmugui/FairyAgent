@@ -7,13 +7,13 @@
   <title>Harry Drive</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
   <!-- P3-4 语义令牌：必须早于下面的内联样式，才能压过旧硬编码色 -->
-  <link rel="stylesheet" href="/fm-assets/tokens.css">
-  <link rel="stylesheet" href="/fm-assets/fm-p3.css">
-  <link rel="stylesheet" href="/fm-assets/fm-tabs.css">
+  <link rel="stylesheet" href="/fm-assets/tokens.css?v=20261003-191808">
+  <link rel="stylesheet" href="/fm-assets/fm-p3.css?v=20261003-193738">
+  <link rel="stylesheet" href="/fm-assets/fm-tabs.css?v=20261003-191808">
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
 function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
 function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
-async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encPath(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
 
 // 可拖动分隔条
 let isDragging = false;
@@ -73,9 +73,9 @@ async function previewMdFile() {
     return;
   }
   var name = window.currentOpenFile.split('/').pop();
-  var ext = name.split('.').pop().toLowerCase();
+  var ext = fileExt(name);
   if (ext === 'md') {
-    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+    window.open('/filemanager/md.html?path=' + encPath(window.currentOpenFile), '_blank');
   } else {
     openFile(window.currentOpenFile, name);
   }
@@ -89,9 +89,7 @@ function showFileInfoPopup() {
     fileInfoPopup = document.createElement("div");
     fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
     const rect = btn.getBoundingClientRect();
-    fileInfoPopup.style.position = "fixed";
-    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-    fileInfoPopup.style.left = rect.left + "px";
+    positionPopup(fileInfoPopup, rect);
     document.body.appendChild(fileInfoPopup);
     return;
   }
@@ -100,15 +98,13 @@ function showFileInfoPopup() {
   
   if (fileInfoPopup) fileInfoPopup.remove();
   
-  const ext = file.name.split(".").pop().toLowerCase();
+  const ext = fileExt(file.name);
   fileInfoPopup = document.createElement("div");
   fileInfoPopup.id = "fileInfoPopup";
   fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
   
   const rect = btn.getBoundingClientRect();
-  fileInfoPopup.style.position = "fixed";
-  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-  fileInfoPopup.style.left = rect.left + "px";
+  positionPopup(fileInfoPopup, rect);
   fileInfoPopup.style.zIndex = "1000";
   
   document.body.appendChild(fileInfoPopup);
@@ -123,7 +119,7 @@ function hideFileInfoPopup() {
   <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
 function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
 function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
-async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encPath(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
 
 // 可拖动分隔条
 let isDragging = false;
@@ -183,9 +179,9 @@ async function previewMdFile() {
     return;
   }
   var name = window.currentOpenFile.split('/').pop();
-  var ext = name.split('.').pop().toLowerCase();
+  var ext = fileExt(name);
   if (ext === 'md') {
-    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+    window.open('/filemanager/md.html?path=' + encPath(window.currentOpenFile), '_blank');
   } else {
     openFile(window.currentOpenFile, name);
   }
@@ -199,9 +195,7 @@ function showFileInfoPopup() {
     fileInfoPopup = document.createElement("div");
     fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
     const rect = btn.getBoundingClientRect();
-    fileInfoPopup.style.position = "fixed";
-    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-    fileInfoPopup.style.left = rect.left + "px";
+    positionPopup(fileInfoPopup, rect);
     document.body.appendChild(fileInfoPopup);
     return;
   }
@@ -210,15 +204,13 @@ function showFileInfoPopup() {
   
   if (fileInfoPopup) fileInfoPopup.remove();
   
-  const ext = file.name.split(".").pop().toLowerCase();
+  const ext = fileExt(file.name);
   fileInfoPopup = document.createElement("div");
   fileInfoPopup.id = "fileInfoPopup";
   fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
   
   const rect = btn.getBoundingClientRect();
-  fileInfoPopup.style.position = "fixed";
-  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-  fileInfoPopup.style.left = rect.left + "px";
+  positionPopup(fileInfoPopup, rect);
   fileInfoPopup.style.zIndex = "1000";
   
   document.body.appendChild(fileInfoPopup);
@@ -232,7 +224,7 @@ function hideFileInfoPopup() {
   <script src="/vendor/pdfjs/pdf.min.js">
 function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
 function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
-async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encPath(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
 
 // 可拖动分隔条
 let isDragging = false;
@@ -292,9 +284,9 @@ async function previewMdFile() {
     return;
   }
   var name = window.currentOpenFile.split('/').pop();
-  var ext = name.split('.').pop().toLowerCase();
+  var ext = fileExt(name);
   if (ext === 'md') {
-    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+    window.open('/filemanager/md.html?path=' + encPath(window.currentOpenFile), '_blank');
   } else {
     openFile(window.currentOpenFile, name);
   }
@@ -308,9 +300,7 @@ function showFileInfoPopup() {
     fileInfoPopup = document.createElement("div");
     fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
     const rect = btn.getBoundingClientRect();
-    fileInfoPopup.style.position = "fixed";
-    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-    fileInfoPopup.style.left = rect.left + "px";
+    positionPopup(fileInfoPopup, rect);
     document.body.appendChild(fileInfoPopup);
     return;
   }
@@ -319,15 +309,13 @@ function showFileInfoPopup() {
   
   if (fileInfoPopup) fileInfoPopup.remove();
   
-  const ext = file.name.split(".").pop().toLowerCase();
+  const ext = fileExt(file.name);
   fileInfoPopup = document.createElement("div");
   fileInfoPopup.id = "fileInfoPopup";
   fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
   
   const rect = btn.getBoundingClientRect();
-  fileInfoPopup.style.position = "fixed";
-  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-  fileInfoPopup.style.left = rect.left + "px";
+  positionPopup(fileInfoPopup, rect);
   fileInfoPopup.style.zIndex = "1000";
   
   document.body.appendChild(fileInfoPopup);
@@ -341,7 +329,7 @@ function hideFileInfoPopup() {
   <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js">
 function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
 function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
-async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encPath(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
 
 // 可拖动分隔条
 let isDragging = false;
@@ -401,9 +389,9 @@ async function previewMdFile() {
     return;
   }
   var name = window.currentOpenFile.split('/').pop();
-  var ext = name.split('.').pop().toLowerCase();
+  var ext = fileExt(name);
   if (ext === 'md') {
-    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+    window.open('/filemanager/md.html?path=' + encPath(window.currentOpenFile), '_blank');
   } else {
     openFile(window.currentOpenFile, name);
   }
@@ -417,9 +405,7 @@ function showFileInfoPopup() {
     fileInfoPopup = document.createElement("div");
     fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
     const rect = btn.getBoundingClientRect();
-    fileInfoPopup.style.position = "fixed";
-    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-    fileInfoPopup.style.left = rect.left + "px";
+    positionPopup(fileInfoPopup, rect);
     document.body.appendChild(fileInfoPopup);
     return;
   }
@@ -428,15 +414,13 @@ function showFileInfoPopup() {
   
   if (fileInfoPopup) fileInfoPopup.remove();
   
-  const ext = file.name.split(".").pop().toLowerCase();
+  const ext = fileExt(file.name);
   fileInfoPopup = document.createElement("div");
   fileInfoPopup.id = "fileInfoPopup";
   fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
   
   const rect = btn.getBoundingClientRect();
-  fileInfoPopup.style.position = "fixed";
-  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-  fileInfoPopup.style.left = rect.left + "px";
+  positionPopup(fileInfoPopup, rect);
   fileInfoPopup.style.zIndex = "1000";
   
   document.body.appendChild(fileInfoPopup);
@@ -533,6 +517,21 @@ function hideFileInfoPopup() {
     
     /* Middle - editor/preview - white */
     .content { flex: 1; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+    /* 标题区：文件名 + 所在目录。名称不省略；目录可省略，完整路径放 title。 */
+    .content-header .ch-name { flex: 0 0 auto; color: #1f2328; }
+    .content-header .ch-dir {
+      flex: 1 1 auto;
+      min-width: 0;
+      margin-left: 8px;
+      padding-left: 8px;
+      border-left: 1px solid #d0d7de;
+      color: #6e7781;
+      font-size: 12px;
+      font-weight: 400;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
     .content-header {
       height: 32px;
       background: #fafafa;
@@ -604,6 +603,206 @@ function hideFileInfoPopup() {
     .ppt-nav { display: flex; gap: 10px; padding: 10px; align-items: center; }
     .ppt-nav button { padding: 6px 12px; background: #1a73e8; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
     .empty-state { padding: 60px; text-align: center; color: #999; }
+
+    /* ===== 设计系统层 =====
+       原有样式是零散硬编码色值与魔法数字，没有变量、没有间距刻度、
+       没有字阶，导致所有元素看起来一样重。这里只补 token 与布局骨架，
+       不动任何业务结构。 */
+    :root {
+      --fm-text-1: var(--ui-text, #14181f);  --fm-text-2: var(--ui-text-dim, #59626f);  --fm-text-3: var(--ui-text-faint, #939ba6);
+      --fm-line-1: var(--ui-border, #e6e9ee);  --fm-line-2: var(--ui-border-soft, #f0f2f5);
+      --fm-surface: var(--ui-surface, #fff);    --fm-surface-2: var(--ui-surface-2, #f7f8fa);
+      --fm-accent: var(--ui-primary, #2563eb);  --fm-accent-weak: var(--ui-primary-soft, #eff4ff);
+      --fm-danger: var(--ui-danger, #dc2626);
+      --fm-s1: 4px; --fm-s2: 8px; --fm-s3: 12px; --fm-s4: 16px; --fm-s5: 24px; --fm-s6: 32px;
+      --fm-r1: 6px; --fm-r2: 10px;
+      --fm-sidebar-w: 320px;
+    }
+
+    /* 侧栏改列向 flex：原来只是 block，列表多短下面都留一大片空洞 */
+    .sidebar {
+      width: var(--fm-sidebar-w);
+      display: flex;
+      flex-direction: column;
+      background: var(--fm-surface);
+      border-right: 1px solid var(--fm-line-1);
+    }
+    .sidebar .fm-list, .sidebar #fileList, .sidebar #list {
+      flex: 1 1 auto; min-height: 0; overflow-y: auto;
+    }
+    #trash { flex: 0 0 auto; }
+
+    .fm-top { min-height: 56px; padding: 0 var(--fm-s5); background: var(--fm-surface); border-bottom: 1px solid var(--fm-line-1); }
+    .fm-top h1 { font-size: 15px; font-weight: 650; letter-spacing: -.01em; }
+    .fm-crumbs { font-size: 12px; color: var(--fm-text-3); }
+    .fm-crumbs .cur { color: var(--fm-text-2); font-weight: 500; }
+
+    /* 文件行：min-width:0 齐全，长名才会省略而不是把行撑爆 */
+    .file-item {
+      display: flex; align-items: center; gap: var(--fm-s2);
+      min-width: 0; padding: var(--fm-s2) var(--fm-s3);
+      border: 1px solid transparent; border-radius: var(--fm-r1);
+      font-size: 13px; color: var(--fm-text-1);
+      transition: background .12s ease, border-color .12s ease;
+    }
+    .file-item:hover { background: var(--fm-surface-2); }
+    .file-item.sel, .file-item.cursor { background: var(--fm-accent-weak); border-color: var(--fm-accent); }
+    .file-item .fm-name, .file-item .name {
+      flex: 1 1 auto; min-width: 0; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap;
+    }
+    /* 类型着色：别让 initrd.img / vmlinuz / config-* 长成同一个样 */
+    .file-item[data-kind="boot"] .fm-name { color: #1d4ed8; font-weight: 550; }
+    .file-item[data-kind="image"] .fm-name { color: #7c3aed; }
+    .file-item[data-kind="archive"] .fm-name { color: #b45309; }
+    .file-item[data-kind="exec"] .fm-name { color: #0f766e; }
+    .file-item[data-kind="text"] .fm-name { color: var(--fm-text-1); }
+    .file-item[data-kind="hidden"] .fm-name { color: var(--fm-text-3); font-style: italic; }
+
+    .fm-viewbtn {
+      min-width: 30px; min-height: 30px;
+      display: inline-flex; align-items: center; justify-content: center;
+      border-radius: var(--fm-r1); color: var(--fm-text-2);
+    }
+    .fm-viewbtn:hover { background: var(--fm-surface-2); color: var(--fm-text-1); }
+    .fm-viewbtn.on, .fm-viewbtn.active { background: var(--fm-accent-weak); color: var(--fm-accent); }
+
+    /* 右栏空态：垂直居中，不再贴着左上角 */
+    .fm-main { background: var(--fm-surface); }
+    .empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: var(--fm-s3); height: 100%; color: var(--fm-text-3);
+    }
+    .empty .icon { font-size: 40px; opacity: .5; }
+    .empty p { margin: 0; font-size: 13px; }
+
+    /* 竖排 bug 的正解：原弹窗只设 left/top，窄容器里被折成一字一行 */
+    #fileInfoPopup, .fm-popup, .context-menu {
+      min-width: 220px; max-width: 320px; white-space: nowrap;
+      border-radius: var(--fm-r2); box-shadow: 0 8px 28px rgba(16,24,40,.14);
+    }
+    .fm-action, .context-menu-item {
+      display: flex; align-items: center; gap: var(--fm-s2);
+      padding: var(--fm-s2) var(--fm-s3); font-size: 13px;
+      white-space: nowrap; border-radius: var(--fm-r1);
+    }
+    .fm-action:hover, .context-menu-item:hover { background: var(--fm-surface-2); }
+    .context-menu-item.danger, .fm-action.danger { color: var(--fm-danger); }
+
+    .sidebar-trash-btn {
+      width: 100%; padding: var(--fm-s3); border: none;
+      border-top: 1px solid var(--fm-line-1);
+      background: var(--fm-surface); color: var(--fm-text-2);
+      font-size: 13px; text-align: left; cursor: pointer;
+    }
+    .sidebar-trash-btn:hover { background: var(--fm-surface-2); color: var(--fm-text-1); }
+
+    /* ===== 回收站面板 =====
+       .trash-panel / .trash-header / .trash-body 原来三个都没有任何 CSS 规则。
+       JS 打开时只设了 display:flex，它就成了 flex 子项，实测占满 1440x900 视口，
+       整个侧栏被盖住，文件树一个都点不动。role="dialog" 说明本意是内容区模态。 */
+    .trash-panel {
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;   /* header+body 整组垂直居中 */
+      background: rgba(9, 11, 15, .55);
+      backdrop-filter: blur(3px);
+      -webkit-backdrop-filter: blur(3px);
+      animation: fm-fade-in .16s ease-out;
+    }
+    .trash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--fm-s3);
+      /* 原来没限宽，header 通栏而 body 是 760px 居中，两者不像一个东西。
+         这里让 header 与 body 上下拼成一张完整卡片。 */
+      width: min(760px, calc(100% - 48px));
+      margin: var(--fm-s5) auto 0;
+      padding: var(--fm-s3) var(--fm-s4);
+      background: var(--fm-surface);
+      border: 1px solid var(--fm-line-1);
+      border-bottom: none;
+      border-radius: var(--fm-r2) var(--fm-r2) 0 0;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing: -.01em;
+      animation: fm-drop-in .2s cubic-bezier(.2, .8, .3, 1);
+    }
+    .trash-header-actions { display: flex; gap: var(--fm-s2); }
+    .trash-body {
+      /* 不能用 flex:1，否则空回收站也是一张 800px 高的白卡片。 */
+      flex: 0 1 auto;
+      max-height: calc(100% - var(--fm-s6) * 2);
+      min-height: 0;
+      overflow-y: auto;
+      margin: 0 auto;
+      width: min(760px, calc(100% - 48px));
+      background: var(--fm-surface);
+      border: 1px solid var(--fm-line-1);
+      border-top: none;
+      border-radius: 0 0 var(--fm-r2) var(--fm-r2);
+      box-shadow: 0 12px 40px rgba(16, 24, 40, .18);
+      animation: fm-rise-in .22s cubic-bezier(.2, .8, .3, 1);
+    }
+    .trash-body:empty::after {
+      content: "回收站是空的";
+      display: block;
+      padding: var(--fm-s6);
+      text-align: center;
+      color: var(--fm-text-3);
+      font-size: 13px;
+    }
+
+    /* ===== 动效 =====
+       只动 transform / opacity / background-color，不碰 width/height/left/top，
+       避免触发 layout。文件行有 data-kind 后可按类型做轻微入场位移。 */
+    @keyframes fm-fade-in  { from { opacity: 0 } to { opacity: 1 } }
+    @keyframes fm-rise-in  { from { opacity: 0; transform: translateY(10px) scale(.99) }
+                             to   { opacity: 1; transform: none } }
+    @keyframes fm-drop-in  { from { opacity: 0; transform: translateY(-8px) }
+                             to   { opacity: 1; transform: none } }
+
+    /* 列表入场：逐项错峰，靠 --i 做延迟，控制在 12 项以内不拖沓 */
+    .file-item {
+      animation: fm-row-in .18s ease-out backwards;
+      animation-delay: calc(var(--i, 0) * 12ms);
+    }
+    @keyframes fm-row-in {
+      from { opacity: 0; transform: translateX(-4px) }
+      to   { opacity: 1; transform: none }
+    }
+
+    /* 工具栏与按钮的即时反馈 */
+    .fm-btn { transition: background-color .12s ease, color .12s ease, border-color .12s ease; }
+    .fm-btn:hover { background: var(--fm-surface-2); }
+    .fm-btn:active { transform: translateY(.5px); }
+    .fm-check { transition: background-color .12s ease, border-color .12s ease; }
+
+    /* 滚动条：默认样式在深色底上几乎不可见 */
+    .fm-list::-webkit-scrollbar, .trash-body::-webkit-scrollbar { width: 10px; }
+    .fm-list::-webkit-scrollbar-thumb, .trash-body::-webkit-scrollbar-thumb {
+      background: var(--fm-line-1); border-radius: 6px; border: 3px solid var(--fm-surface);
+    }
+    .fm-list::-webkit-scrollbar-thumb:hover { background: var(--fm-text-3); }
+
+    /* 键盘焦点不能被 hover 样式吃掉 */
+    .file-item:focus-visible, .fm-btn:focus-visible, .fm-viewbtn:focus-visible {
+      outline: 2px solid var(--fm-accent);
+      outline-offset: 1px;
+    }
+
+    /* 尊重系统减少动效偏好 */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: .001ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: .001ms !important;
+      }
+    }
   </style>
 
 <style>
@@ -639,7 +838,20 @@ function hideFileInfoPopup() {
         <div class="breadcrumb" id="breadcrumb"></div>
         <div class="file-tree" id="fileTree"></div>
         <div class="sidebar-footer">
-          <button type="button" class="sidebar-trash-btn" id="trashBtn">🗑 回收站</button>
+          <button type="button" class="sidebar-trash-btn" id="trashBtn"
+                  aria-label="回收站">
+            <span class="stb-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="17" height="17" fill="none"
+                   stroke="currentColor" stroke-width="1.9"
+                   stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 6h18M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6"/>
+                <path d="M5.5 6l.8 12.1A2 2 0 0 0 8.3 20h7.4a2 2 0 0 0 2-1.9L18.5 6"/>
+                <path d="M10 10.5v5M14 10.5v5"/>
+              </svg>
+            </span>
+            <span class="stb-label">回收站</span>
+            <span class="stb-count" id="trashCount" hidden>0</span>
+          </button>
         </div>
       </div>
       <div class="sidebar-resize"></div>
@@ -686,6 +898,67 @@ function hideFileInfoPopup() {
     pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
     
     const API = '/api';
+
+    // 浮动层定位：先按锚点放，再按实际尺寸钳进视口。
+    // 之前是 10 份复制粘贴的 style.top/style.left，落在靠右的文件行上就会
+    // 溢出视口、被折回窄容器，按钮文字于是变成一个字一行。
+    // encodeURIComponent 会把 / 编码成 %2F。Node 自身能还原，但 nginx / Cloudflare
+    // 在规范化阶段直接拒绝 %2F，公网就表现为「打不开这个文件夹 HTTP 404」。
+    // 实测：严格反代下 path=%2Fhome → 400，path=/home → 200。
+    // 按 / 分段编码再拼回，斜杠保持原样，中文与空格仍然正确转义。
+    // 注意不能用 map(encodeURIComponent)：map 会把数组下标当第二参数传进去，
+    // 从第二段起就被当成 radix 编成垃圾。
+    function encPath(p) {
+      if (p === undefined || p === null) return '';
+      return String(p).split('/').map(function (seg) {
+        return encodeURIComponent(seg);
+      }).join('/');
+    }
+    window.encPath = encPath;
+    // role="dialog" 的模态必须支持 Esc 关闭：原来只能点 ✕，
+    // 键盘用户完全无法退出回收站。
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var tp = document.getElementById('trashPanel');
+      var fp = document.getElementById('fileInfoPopup');
+      if (tp && tp.style.display !== 'none') {
+        e.preventDefault();
+        if (typeof closeTrash === 'function') closeTrash();
+        var btn = document.getElementById('trashBtn');
+        if (btn) btn.focus();
+        return;
+      }
+      if (fp && fp.style.display === 'block') {
+        e.preventDefault();
+        fp.style.display = 'none';
+      }
+    });
+
+
+
+    function positionPopup(el, rect) {
+      el.style.position = "fixed";
+      el.style.visibility = "hidden";
+      el.style.display = "";
+      el.style.top = "0px";
+      el.style.left = "0px";
+      var w = el.offsetWidth || 240;
+      var h = el.offsetHeight || 0;
+      var margin = 8;
+      var left = rect.left;
+      var top = rect.bottom + 10;
+      if (left + w > window.innerWidth - margin) left = window.innerWidth - w - margin;
+      if (left < margin) left = margin;
+      if (top + h > window.innerHeight - margin) {
+        // 下方放不下就翻到上方，上方也放不下就贴底
+        top = rect.top - h - 10;
+        if (top < margin) top = Math.max(margin, window.innerHeight - h - margin);
+      }
+      el.style.left = left + "px";
+      el.style.top = top + "px";
+      el.style.visibility = "";
+    }
+
     let currentPath = '';
     let files = [];
     let activeFile = null;
@@ -755,26 +1028,49 @@ function hideFileInfoPopup() {
       }
     }
 
+    // 每次点文件夹都要重取。连点时旧响应可能后到，必须按序号丢弃过期结果，
+    // 否则会出现「点了 A 却显示 B」；目录闪烁则是加载期间毫无反馈。
+    let filesSeq = 0;
     async function loadFiles(path = '') {
+      const seq = ++filesSeq;
       currentPath = path;
       // Remember the folder across refreshes so the sidebar returns to the
       // same place the user was browsing.
       try { sessionStorage.setItem('fm_cwd', path); } catch (_) {}
       updateBreadcrumb();
+      const setState = (window.__fmP3 && window.__fmP3.setState) || function () {};
+      setState('loading');
       try {
-        const res = await fetch(API + '/files?path=' + encodeURIComponent(path));
+        const res = await fetch(API + '/files?path=' + encPath(path));
+        if (seq !== filesSeq) return;
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         files = await res.json();
+        if (seq !== filesSeq) return;
         renderFileTree();
-      } catch (e) { console.error(e); }
+        setState(files && files.length ? null : 'empty');
+      } catch (e) {
+        if (seq !== filesSeq) return;
+        console.error(e);
+        // 失败时清掉旧内容：否则会一直停在上一个目录的列表上，看起来像「卡住了」。
+        files = [];
+        renderFileTree();
+        setState('error', (e && e.message) || '加载失败');
+      }
     }
 
     function updateBreadcrumb() {
       const bc = document.getElementById('breadcrumb');
-      let html = '<a onclick="loadFiles(\'\')">根目录</a>';
+      // 点根目录要显式标记，否则会被 loadFiles 的防抖逻辑丢弃。
+      let html = '<a onclick="loadFiles(\'\', {explicit:true})">根目录</a>';
+      // 绝对路径时层级必须保留前导斜杠：原来累加出的 'home/harry' 会被后端
+      // 当成 REPO 下的相对路径，点面包屑层级直接跳错甚至 404。
+      const isAbs = currentPath.startsWith('/');
       let acc = '';
       currentPath.split('/').filter(p => p).forEach(p => {
-        acc += (acc ? '/' : '') + p;
-        html += ' / <a onclick="loadFiles(\'' + acc + '\')">' + p + '</a>';
+        acc = acc ? acc + '/' + p : (isAbs ? '/' + p : p);
+        // 文件名直接拼进 onclick 的单引号里，含引号或尖括号会破坏 HTML 结构。
+        const label = String(p).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        html += ' / <a onclick="loadFiles(\'' + acc.replace(/'/g, '\\\'') + '\')">' + label + '</a>';
       });
       bc.innerHTML = html;
     }
@@ -791,15 +1087,61 @@ function hideFileInfoPopup() {
         const icon = f.isDirectory ? 'mdi-folder' : getFileIconClass(f.name);
         const click = f.isDirectory ? 'loadFiles(\''+f.path+'\')' : 'openFile(\''+f.path+'\',\''+f.name+'\')';
         const active = activeFile === f.path ? 'active' : '';
-        return '<div class="file-item ' + cls + ' ' + active + '" ' +
+        return '<div class="file-item ' + cls + ' ' + active + '" data-kind="' + kindOf(f) + '" ' +
           'onclick="' + click + '" ' +
           'oncontextmenu="showContextMenu(event, \'' + f.path + '\', \'' + f.name + '\', ' + f.isDirectory + ')">' +
-          '<i class="mdi ' + icon + ' icon"></i>' + f.name + '</div>';
+          '<i class="mdi ' + icon + ' icon"></i>' +
+          '<span class="fm-name" title="' + f.name.replace(/"/g, '&quot;') + '">' + f.name + '</span></div>';
       }).join('');
     }
 
+    // 文件类型归类：原来只分「文件夹/文件」两类，initrd.img、vmlinuz、
+    // config-7.0.0-34-generic 渲染出来完全一样，扫目录时无法快速分辨。
+    function kindOf(f) {
+      if (f.isDirectory) return 'dir';
+      const n = String(f.name || '');
+
+      // 内核引导文件先判。/boot 下面几乎全是 vmlinuz-7.0.0-34-generic 这种
+      // 带版本后缀的名字，先按扩展名判会全部掉进 other，正好在最需要区分的
+      // 地方失效，所以这里按前缀识别。
+      // 注意不要加 $：vmlinuz-7.0.0-34-generic 这类带版本后缀的名字才是主流，
+      // 锚定结尾会让整组规则全部落空。
+      if (/^(vmlinuz|initrd|initramfs)/i.test(n)) return 'boot';
+      if (/^System\.map/i.test(n)) return 'boot';
+      if (/^config-\d/i.test(n)) return 'boot';
+      if (/^mt\d+\+|^(pxe|ld\.linux)/i.test(n)) return 'exec';
+
+      // 再剥掉 -<版本> 后缀判扩展名：foo.tar.gz-1.2.3 / report.2024-01-01
+      // 判定扩展名前先剥版本后缀，但必须把扩展名和主干分开：
+      // 直接对整串做贪婪替换，backup-20240115.tar.gz 会把 .tar.gz 一起吃掉，
+      // report.2024-01-01.pdf 会只剩 .2024-01，两种都判不出类型。
+      const dot = n.lastIndexOf('.');
+      const ext = dot > 0 ? n.slice(dot) : '';
+      const stem = dot > 0 ? n.slice(0, dot) : n;
+      const base = (stem.replace(/-\d[\w+~-]*$/, '').replace(/\.\d{4}-\d{2}-\d{2}$/, '') || stem) + ext;
+
+      if (/\.(img|iso|qcow2|vmdk|png|jpe?g|gif|webp|bmp|svg|avif)$/i.test(base)) return 'image';
+      if (/\.(tar|tar\.gz|tgz|zip|xz|bz2|gz|zst|7z|rar|deb|rpm|apk)$/i.test(base)) return 'archive';
+      if (/\.(ko|so|so\.\d+|dll|dylib|bin|exe|elf|wasm)$/i.test(base)) return 'exec';
+      if (/\.(txt|md|log|json|ya?ml|toml|conf|cfg|ini|env|sh|bash|py|go|js|ts|tsx|c|h|cpp|rs|java|css|html|sql|csv|pdf|docx?|xlsx?|pptx?)$/i.test(base)) return 'text';
+      if (base.charAt(0) === '.') return 'hidden';
+      return 'other';
+    }
+    // 这里原来有 13 处复制粘贴的 name.split('.').pop()，共用同一个 bug：
+    // config-7.0.0-34-generic 会算成 "0-34-generic"，界面上就显示成
+    // 「类型: 0-34-GENERIC 文件」。尾段以数字开头或含分隔符时，说明它
+    // 其实是版本后缀的一部分，不是扩展名。
+    function fileExt(name) {
+      const n = String(name || '');
+      const dot = n.lastIndexOf('.');
+      if (dot <= 0) return '';
+      const tail = n.slice(dot + 1);
+      if (!/^[a-z][a-z0-9]{0,9}$/i.test(tail)) return '';
+      return tail.toLowerCase();
+    }
+
     function getFileIconClass(name) {
-      const ext = name.split('.').pop().toLowerCase();
+      const ext = fileExt(name);
       const icons = { 
         md: 'mdi-language-markdown', txt: 'mdi-file-document-outline', js: 'mdi-language-javascript', 
         py: 'mdi-language-python', html: 'mdi-language-html5', css: 'mdi-language-css3', 
@@ -874,7 +1216,7 @@ function hideFileInfoPopup() {
 
     function downloadFile(path) {
       hideContextMenu();
-      window.location.href = API + '/download?path=' + encodeURIComponent(path);
+      window.location.href = API + '/download?path=' + encPath(path);
     }
 
     async function deleteFile(path, isDir) {
@@ -887,7 +1229,7 @@ function hideFileInfoPopup() {
       if (!confirm(confirmMsg)) return;
 
       try {
-        const res = await fetch(API + '/files?path=' + encodeURIComponent(path), { method: 'DELETE' });
+        const res = await fetch(API + '/files?path=' + encPath(path), { method: 'DELETE' });
         // 原来不查响应：后端返 400/500 时界面照样刷新，看起来像删成功了。
         if (!res.ok) {
           let msg = '删除失败（HTTP ' + res.status + '）';
@@ -1008,34 +1350,57 @@ function hideFileInfoPopup() {
       if (body) body.addEventListener('click', trashOnClick);
     });
 
+    // 标题原来只写文件名，同名文件一多就分不清当前看的是哪一个。
+    // 这里补上所在目录；路径/文件名来自服务端，逐节点用 textContent 赋值，
+    // 不拼 innerHTML，避免文件名里的尖括号变成标签。
+    function setContentHeader(el, path, name) {
+      if (!el) return;
+      const dir = path.slice(0, Math.max(0, path.length - name.length)).replace(/\/+$/, '');
+      el.textContent = '';
+      const n = document.createElement('span');
+      n.className = 'ch-name';
+      n.textContent = name;
+      el.appendChild(n);
+      if (dir) {
+        const d = document.createElement('span');
+        d.className = 'ch-dir';
+        d.textContent = dir;
+        d.title = path;
+        el.appendChild(d);
+      }
+      el.title = path;
+    }
+
     async function openFile(path, name) {
       window.currentOpenFile = path; // 设置全局变量供 popup 使用
       activeFile = path; // highlight the item in the sidebar tree
       try { sessionStorage.setItem('fm_open', path); } catch (_) {}
       renderFileTree();
       
-      const ext = name.split('.').pop().toLowerCase();
+      const ext = fileExt(name);
       const header = document.getElementById('contentHeader');
       const body = document.getElementById('contentBody');
       const info = document.getElementById('aiContent');
       
-      header.textContent = name;
+      setContentHeader(header, path, name);
       
       // File info panel
       const file = files.find(f => f.path === path);
-      let previewBtn = ext === 'md' ? "<a href='/filemanager/md.html?path="+encodeURIComponent(path)+"' target='_blank' style='margin-left:8px;padding:4px 10px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:12px;'>👁 预览</a>" : '';info.innerHTML = '<p><strong>名称:</strong> ' + name + previewBtn + '</p>' +
+      let previewBtn = ext === 'md' ? "<a href='/filemanager/md.html?path="+encPath(path)+"' target='_blank' style='margin-left:8px;padding:4px 10px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:12px;'>👁 预览</a>" : '';info.innerHTML = '<p><strong>名称:</strong> ' + name + previewBtn + '</p>' +
         '<p><strong>大小:</strong> ' + (file ? formatSize(file.size) : '-') + '</p>' +
         '<p><strong>类型:</strong> ' + (file ? (file.isDirectory ? '文件夹' : ext.toUpperCase() + ' 文件') : '-') + '</p>' + previewBtn;
       
       try {
         // Markdown - rendered preview + source editor (openMd)
         if (ext === 'md' || ext === 'markdown') {
-          const text = await (await fetch(API+'/download?path='+encodeURIComponent(path))).text();
+          const text = await (await fetch(API+'/download?path='+encPath(path))).text();
+          if (window.currentOpenFile !== path) return; // 快速切换文件时丢弃过期响应
           openMd(path, name, text);
         }
         // Text files - Monaco editor
         else if (['txt','js','ts','html','css','json','py','java','c','cpp','go','rs','sh','yaml','yml','xml','sql'].includes(ext)) {
-          const text = await (await fetch(API+'/download?path='+encodeURIComponent(path))).text();
+          const text = await (await fetch(API+'/download?path='+encPath(path))).text();
+          if (window.currentOpenFile !== path) return; // 快速切换文件时丢弃过期响应
           body.innerHTML = '<div id="editor"></div>';
           if (monacoReady && window.monaco) {
             if (monacoModel) monacoModel.dispose();
@@ -1058,14 +1423,14 @@ function hideFileInfoPopup() {
           body.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;background:#fff;">' +
             '<div style="padding:6px 12px;background:#fafafa;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;font-size:12px;color:#555;">' +
               '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(name) + '</span>' +
-              '<a href="' + API + '/download?path=' + encodeURIComponent(path) + '" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;white-space:nowrap;">在新标签打开 ↗</a>' +
+              '<a href="' + API + '/download?path=' + encPath(path) + '" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;white-space:nowrap;">在新标签打开 ↗</a>' +
             '</div>' +
-            '<iframe src="' + API + '/download?path=' + encodeURIComponent(path) + '" style="flex:1;width:100%;border:none;background:#525659;"></iframe>' +
+            '<iframe src="' + API + '/download?path=' + encPath(path) + '" style="flex:1;width:100%;border:none;background:#525659;"></iframe>' +
           '</div>';
         }
         // Images
         else if (['jpg','jpeg','png','gif','svg','webp','bmp','ico','avif','tif','tiff'].includes(ext)) {
-          body.innerHTML = '<div style="padding:20px;height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:auto;"><img src="'+API+'/download?path='+encodeURIComponent(path)+'" class="preview-img" style="max-width:100%;max-height:100%;object-fit:contain;"></div>';
+          body.innerHTML = '<div style="padding:20px;height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:auto;"><img src="'+API+'/download?path='+encPath(path)+'" class="preview-img" style="max-width:100%;max-height:100%;object-fit:contain;"></div>';
         }
         // Audio
         // Audio — full Spotify-style player via viewer.html (large cover,
@@ -1087,20 +1452,21 @@ function hideFileInfoPopup() {
         else if (ext === 'xlsx' || ext === 'xls') {
           body.innerHTML = '<div class="empty-state">⏳ 加载表格中...</div>';
           try { await renderSpreadsheet(path, name, body); }
-          catch (err) { body.innerHTML = '<div class="empty-state"><p>表格加载失败：'+escapeHtml(err.message)+'</p>' + '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>'; }
+          catch (err) { body.innerHTML = '<div class="empty-state"><p>表格加载失败：'+escapeHtml(err.message)+'</p>' + '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encPath(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>'; }
         }
         // DOCX - docx-preview
         else if (ext === 'docx') {
           body.innerHTML = '<div class="empty-state">⏳ 加载 DOCX 中...</div>';
           try { await renderDocx(path, body); }
-          catch (err) { body.innerHTML = '<div class="empty-state"><p>DOCX 加载失败：'+escapeHtml(err.message)+'</p>' + '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>'; }
+          catch (err) { body.innerHTML = '<div class="empty-state"><p>DOCX 加载失败：'+escapeHtml(err.message)+'</p>' + '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encPath(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>'; }
         }
         // Other - text-ish files go to Monaco; binary files get a download card
         else {
           const textExts = ['log','ini','conf','cfg','env','properties','toml','vue','svelte','tex','rst','m','h','hpp','cs','php','pl','lua','r','dart','swift','kt','scala','sql','dockerfile','lock','gitignore','gitattributes','editorconfig','csv','tsv'];
           const likelyText = textExts.includes(ext) || (file && file.size > 0 && file.size < 512 * 1024);
           if (likelyText) {
-            const text = await (await fetch(API+'/download?path='+encodeURIComponent(path))).text();
+            const text = await (await fetch(API+'/download?path='+encPath(path))).text();
+            if (window.currentOpenFile !== path) return; // 快速切换文件时丢弃过期响应
             if (text.indexOf('\u0000') !== -1) {
               showBinaryPanel(body, path, name, file ? file.size : 0);
             } else {
@@ -1125,7 +1491,7 @@ function hideFileInfoPopup() {
     // PDF Preview
     async function loadPdfPreview(path, body) {
       try {
-        const res = await fetch(API + '/download?path=' + encodeURIComponent(path));
+        const res = await fetch(API + '/download?path=' + encPath(path));
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
         
@@ -1143,7 +1509,7 @@ function hideFileInfoPopup() {
         renderPdfPage();
       } catch(e) {
         body.innerHTML = '<div class="empty-state"><p>PDF 加载失败：'+escapeHtml(e.message)+'</p>' +
-          '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>';
+          '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encPath(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>';
       }
     }
 
@@ -1167,7 +1533,7 @@ function hideFileInfoPopup() {
     // PPT Preview
     async function loadPptPreview(path, body) {
       try {
-        const res = await fetch(API + '/ppt-preview?path=' + encodeURIComponent(path));
+        const res = await fetch(API + '/ppt-preview?path=' + encPath(path));
         const data = await res.json();
         if (data.success && data.slides) {
           let slides = data.slides;
@@ -1197,7 +1563,7 @@ function hideFileInfoPopup() {
     }
 
     function pptFallbackHtml(path) {
-      return '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后用 Office/WPS 打开</a></p>';
+      return '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encPath(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后用 Office/WPS 打开</a></p>';
     }
 
     function formatSize(b) {
@@ -1225,12 +1591,12 @@ function hideFileInfoPopup() {
         '<div style="font-size:40px;margin-bottom:16px;">🗎</div>' +
         '<p style="margin-bottom:8px;font-size:14px;">' + escapeHtml(name) + (size ? '（' + formatSize(size) + '）' : '') + '</p>' +
         '<p style="margin-bottom:20px;font-size:13px;color:#999;">该格式暂不支持在线预览，可下载后查看</p>' +
-        '<a href="' + API + '/download?path=' + encodeURIComponent(path) + '" style="padding:8px 16px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载 / 在浏览器打开</a></div>';
+        '<a href="' + API + '/download?path=' + encPath(path) + '" style="padding:8px 16px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载 / 在浏览器打开</a></div>';
     }
 
     async function renderSpreadsheet(path, name, body) {
       await loadScript('/vendor/xlsx/xlsx.full.min.js');
-      const buf = await (await fetch(API + '/download?path=' + encodeURIComponent(path))).arrayBuffer();
+      const buf = await (await fetch(API + '/download?path=' + encPath(path))).arrayBuffer();
       const wb = XLSX.read(buf, { type: 'array' });
       if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('工作簿为空');
       let current = 0;
@@ -1259,7 +1625,7 @@ function hideFileInfoPopup() {
 
     async function renderDocx(path, body) {
       await loadScript('/vendor/docx/docx-preview.min.js');
-      const buf = await (await fetch(API + '/download?path=' + encodeURIComponent(path))).arrayBuffer();
+      const buf = await (await fetch(API + '/download?path=' + encPath(path))).arrayBuffer();
       body.innerHTML = '<div style="min-height:100%;padding:24px 0;background:#f2f2f2;"><div id="docxWrap" style="max-width:880px;margin:0 auto;padding:36px 48px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.12);"></div></div>';
       await docx.renderAsync(buf, document.getElementById('docxWrap'));
     }
@@ -1278,7 +1644,7 @@ function hideFileInfoPopup() {
         document.getElementById('progress-text').innerHTML = f.name + ': 上传中...';
         try {
           const buf = await f.arrayBuffer();
-          const res = await fetch(API + '/upload?path=' + encodeURIComponent(currentPath) + '&name=' + encodeURIComponent(f.name), {
+          const res = await fetch(API + '/upload?path=' + encPath(currentPath) + '&name=' + encodeURIComponent(f.name), {
             method: 'POST',
             headers: { 'Content-Type': 'application/octet-stream' },
             body: buf
@@ -1312,9 +1678,9 @@ function hideFileInfoPopup() {
       return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     }
   
-function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
+function openMd(p,n,t){setContentHeader(document.getElementById('contentHeader'),p,n);document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
 function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
-async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encPath(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
 
 // 可拖动分隔条
 let isDragging = false;
@@ -1374,9 +1740,9 @@ async function previewMdFile() {
     return;
   }
   var name = window.currentOpenFile.split('/').pop();
-  var ext = name.split('.').pop().toLowerCase();
+  var ext = fileExt(name);
   if (ext === 'md') {
-    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+    window.open('/filemanager/md.html?path=' + encPath(window.currentOpenFile), '_blank');
   } else {
     openFile(window.currentOpenFile, name);
   }
@@ -1390,9 +1756,7 @@ function showFileInfoPopup() {
     fileInfoPopup = document.createElement("div");
     fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
     const rect = btn.getBoundingClientRect();
-    fileInfoPopup.style.position = "fixed";
-    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-    fileInfoPopup.style.left = rect.left + "px";
+    positionPopup(fileInfoPopup, rect);
     document.body.appendChild(fileInfoPopup);
     return;
   }
@@ -1401,15 +1765,13 @@ function showFileInfoPopup() {
   
   if (fileInfoPopup) fileInfoPopup.remove();
   
-  const ext = file.name.split(".").pop().toLowerCase();
+  const ext = fileExt(file.name);
   fileInfoPopup = document.createElement("div");
   fileInfoPopup.id = "fileInfoPopup";
   fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
   
   const rect = btn.getBoundingClientRect();
-  fileInfoPopup.style.position = "fixed";
-  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
-  fileInfoPopup.style.left = rect.left + "px";
+  positionPopup(fileInfoPopup, rect);
   fileInfoPopup.style.zIndex = "1000";
   
   document.body.appendChild(fileInfoPopup);
@@ -1420,12 +1782,12 @@ function hideFileInfoPopup() {
     fileInfoPopup = null;
   }
 }</script>
-  <script src="/fm-assets/fm-p3.js"></script>
+  <script src="/fm-assets/fm-p3.js?v=20261003-193738"></script>
   <!-- P1-10 编辑锁：排在 fm-p3.js 之后（要用它的 toast）且在 inline script 之后（要覆盖 openMd/savMd） -->
-  <script src="/fm-assets/fm-lock.js"></script>
+  <script src="/fm-assets/fm-lock.js?v=20261003-1915"></script>
   <!-- P1-5 前端续传上传器：必须最后加载，它要接管 fileInput 的 change 监听 -->
-  <script src="/fm-assets/fm-upload.js"></script>
+  <script src="/fm-assets/fm-upload.js?v=20261003-1915"></script>
   <!-- P1-9 多标签页：必须最后加载，它要覆盖 loadFiles 记录每个标签页各自的目录 -->
-  <script src="/fm-assets/fm-tabs.js"></script>
+  <script src="/fm-assets/fm-tabs.js?v=20261003-1915"></script>
 </body>
 </html>

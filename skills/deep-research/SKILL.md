@@ -28,6 +28,7 @@ priority: 55
 ## 核心约束
 
 - 先对齐需求，再开始调研。
+- **动手搜索前先读 `references/search-endpoint-limits.md`**：本机搜索端点有已实测的硬限制（多词 AND 组合召回极差、DuckDuckGo 被 DNS 污染），里面有成因、已落地的自动化对策和手工查询策略。不要用同一个长查询反复撞墙。
 - 主线程先拆“步骤”，再把每个步骤拆成多个 `create_subtask`。
 - 每个 `subtask` 只负责一个细分、具体、边界清晰的任务。
 - `subtask` 的主产物是执行结果，不是引用清单。

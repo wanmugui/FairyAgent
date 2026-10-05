@@ -1,3 +1,14 @@
+// 路径编码兜底：encodeURIComponent 会把 / 编成 %2F，nginx/Cloudflare 拒绝该形式，
+// 公网表现为「打不开这个文件夹 HTTP 404」。这里按 / 分段编码，斜杠保持原样。
+// index-fm.html 里已有同名实现，此处仅在它尚未加载时兜底，避免依赖脚本执行顺序。
+if (typeof window.encPath !== 'function') {
+  window.encPath = function (p) {
+    if (p === undefined || p === null) return '';
+    return String(p).split('/').map(function (seg) {
+      return encodeURIComponent(seg);
+    }).join('/');
+  };
+}
 /* P3-1/2/3/5/6/7 文件列表交互层
    单独成文件而不是塞进 index-fm.html 的 1297 行里：这块逻辑要能被单测和 review。
    挂载方式是"接管"已有的 renderFileTree / loadFiles，不改原文件的其它功能。 */
@@ -71,6 +82,27 @@
   }
 
   // ————————————————— P3-6 三态 —————————————————
+  // 骨架行数跟随列表可视高度。之前固定 8 行，加载时下方留一大片纯白，
+  // 看起来像"只加载了一半"；行宽也做点变化，更接近真实条目。
+  function fillSkeleton() {
+    // 先放一行量出真实步距：--ui-row-h 在不同视图下并不等于 .sk-row 的
+    // 实际渲染高度，按变量算会算少一半行数。
+    skeleton.innerHTML = '<div class="sk-row" style="width:80%"></div>';
+    const probe = skeleton.firstElementChild;
+    const pcs = getComputedStyle(probe);
+    const stride = probe.offsetHeight +
+      (parseFloat(pcs.marginTop) || 0) + (parseFloat(pcs.marginBottom) || 0);
+    const cs = getComputedStyle(skeleton);
+    const avail = skeleton.clientHeight -
+      (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0);
+    const n = Math.max(3, Math.min(24, Math.floor(avail / (stride || 31))));
+    const widths = [88, 72, 81, 64, 86, 70, 78, 61, 84, 68, 90, 66];
+    // 用取模循环而不是 slice：n 由可视高度算出，可能超过 widths 长度，
+    // slice 会被数组长度截断（列表高时只画 12 行，下面留一大片空白）。
+    skeleton.innerHTML = Array.from({ length: n }, (_, i) =>
+      `<div class="sk-row" style="width:${widths[i % widths.length]}%"></div>`).join('');
+  }
+
   function setState(kind, msg) {
     if (!stateBox) return;
     const icons = { loading: '', empty: '📂', error: '⚠️' };
@@ -80,7 +112,7 @@
     skeleton.classList.remove('on');
     toolbar.classList.remove('loading');
     if (!kind) { stateBox.className = ''; stateBox.innerHTML = ''; return; }
-    if (kind === 'loading') { skeleton.classList.add('on'); toolbar.classList.add('loading'); return; }
+    if (kind === 'loading') { skeleton.classList.add('on'); toolbar.classList.add('loading'); fillSkeleton(); return; }
     stateBox.className = 'on ' + kind;
     stateBox.innerHTML = kind === 'error'
       ? `<div class="fm-state-icon">${icons.error}</div>
@@ -165,6 +197,7 @@
       if (i === st.cursor) cls.push('cursor');
       const icon = f.isDirectory ? 'mdi-folder' : getFileIconClass(f.name);
       return `<div class="${cls.join(' ')}" data-path="${esc(f.path)}" data-dir="${f.isDirectory ? 1 : 0}"
+        data-kind="${typeof kindOf === 'function' ? kindOf(f) : 'other'}" style="--i:${Math.min(i, 11)}"
         data-i="${i}" draggable="true" tabindex="0" role="option"
         aria-selected="${sel.has(f.path)}" title="${esc(f.name)}">
         <input class="fm-check" type="checkbox" ${sel.has(f.path) ? 'checked' : ''}
@@ -275,6 +308,8 @@
   // 刻意**不**把整个 st 暴露出去：那等于让外面直接改 selected/cursor 之类
   // 与排序无关的状态，多标签页只需要「设一个排序」和「读当前排序」而已。
   window.__fmP3 = {
+    // list 区的加载/空/错误态由内联脚本的 loadFiles 驱动，这里把状态机开出去。
+    setState,
     getSort: () => ({ sort: st.sort, order: st.order }),
     setSort: (s, o) => {
       if (s) st.sort = s;
@@ -323,7 +358,7 @@
     for (const p of paths) {
       const nm = p.split('/').pop();
       try {
-        const r = await fetch(API + '/files?path=' + encodeURIComponent(p), { method: 'DELETE' });
+        const r = await fetch(API + '/files?path=' + encPath(p), { method: 'DELETE' });
         if (r.ok) {
           const j = await r.json().catch(() => ({}));
           if (j && j.id) okIds.push(j.id);
@@ -613,12 +648,12 @@
     bulk.setAttribute('role', 'toolbar');
     bulk.setAttribute('aria-label', '批量操作');
     bulk.innerHTML = `<span class="count">已选 0 项</span>
-      <button data-act="open">打开</button>
-      <button data-act="down">下载</button>
-      <button data-act="star">星标</button>
-      <button data-act="rename">重命名</button>
-      <button data-act="del" class="danger">删除</button>
-      <button data-act="clear">取消</button>`;
+      <button data-act="open" title="打开" aria-label="打开"><svg class="bb-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 13.5V3.6A1.4 1.4 0 0 1 3.4 2.2h3.1l1.5 1.8h4.6A1.4 1.4 0 0 1 14 5.4v1"/><path d="M1.2 13.6 2.9 8.5a1.4 1.4 0 0 1 1.3-1h9.4a1.4 1.4 0 0 1 1.3 1.9l-1.5 4.2a1.4 1.4 0 0 1-1.3 1H2.6a1.4 1.4 0 0 1-1.4-1z"/></svg></button>
+      <button data-act="down" title="下载" aria-label="下载"><svg class="bb-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 2.2v7.6"/><path d="m4.6 6.6 3.4 3.4 3.4-3.4"/><path d="M2.6 12.4v.4a1 1 0 0 0 1 1h8.8a1 1 0 0 0 1-1v-.4"/></svg></button>
+      <button data-act="star" title="星标" aria-label="星标"><svg class="bb-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 2.2 1.82 3.69 4.07.59-2.95 2.87.7 4.05L8 11.38l-3.64 1.91.7-4.05-2.95-2.87 4.07-.59z"/></svg></button>
+      <button data-act="rename" title="重命名" aria-label="重命名"><svg class="bb-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.2 2.7a1.52 1.52 0 0 1 2.15 2.15l-7.9 7.9L2 14.2l1.45-3.4z"/></svg></button>
+      <button data-act="del" class="danger" title="删除" aria-label="删除"><svg class="bb-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.6 4.4h10.8"/><path d="M6.1 4.4V3.1a1 1 0 0 1 1-1h1.8a1 1 0 0 1 1 1v1.3"/><path d="M4 4.4l.68 8.5a1 1 0 0 0 1 .93h4.64a1 1 0 0 0 1-.93L12 4.4"/><path d="M6.7 7.1v3.8M9.3 7.1v3.8"/></svg></button>
+      <button data-act="clear" title="取消" aria-label="取消"><svg class="bb-ico" viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m4.2 4.2 7.6 7.6M11.8 4.2l-7.6 7.6"/></svg></button>`;
 
     stateBox = document.createElement('div');
     stateBox.id = 'fm-state';
@@ -727,7 +762,7 @@
       if (!paths.length) return;
       if (act === 'del') return doDelete(paths);
       if (act === 'open') { paths[0].endsWith('/') ? null : null; return openFile(paths[0], paths[0].split('/').pop()); }
-      if (act === 'down') { paths.forEach((p) => { window.location.href = API + '/download?path=' + encodeURIComponent(p); }); return; }
+      if (act === 'down') { paths.forEach((p) => { window.location.href = API + '/download?path=' + encPath(p); }); return; }
       if (act === 'star') {
         for (const p of paths) {
           await fetch(API + '/star', { method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -750,10 +785,33 @@
     if (!tree) return origRender && origRender.apply(this, arguments);
     render();
   };
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', refreshTrashCount);
+  } else {
+    refreshTrashCount();
+  }
 
-  window.loadFiles = async function (path = '') {
-    if (path !== '') explicitNav = true;          // 带路径的才算显式导航
-    else if (explicitNav) return;                  // 迟到的默认加载，丢弃
+
+  // 侧栏回收站入口显示待清理数量，0 时隐藏徽标。
+  function refreshTrashCount() {
+    try {
+      fetch(API + '/trash').then(r => r.ok ? r.json() : []).then(list => {
+        var el = document.getElementById('trashCount');
+        if (!el) return;
+        var n = Array.isArray(list) ? list.length : 0;
+        el.textContent = String(n);
+        el.hidden = n === 0;
+      }).catch(function () {});
+    } catch (e) { /* 回收站不可用不该影响主流程 */ }
+  }
+
+  window.loadFiles = async function (path = '', opts) {
+    // 原来只靠 path !== '' 判断「显式导航」，但用户点根目录面包屑时传的也是
+    // 空字符串，于是被当成迟到的默认加载直接丢弃 —— 点根目录完全无反应。
+    // 现在允许调用方用 { explicit: true } 明确表示这是用户主动导航。
+    const forced = !!(opts && opts.explicit);
+    if (path !== '' || forced) explicitNav = true;
+    else if (explicitNav) return;
     const my = ++reqSeq;
     lastError = null;
     if (!tree) mount();
@@ -764,7 +822,7 @@
     setState('loading');
     st.cursor = 0; st.anchor = null; clearSel();
     try {
-      const url = API + '/files?path=' + encodeURIComponent(path) +
+      const url = API + '/files?path=' + encPath(path) +
         '&sort=' + encodeURIComponent(st.sort) + '&order=' + encodeURIComponent(st.order);
       const res = await fetch(url);
       if (my !== reqSeq) return;            // 已被更新的请求取代，别再画

@@ -9,6 +9,9 @@
   flex-direction: column;
   flex: 1 1 0%;
   min-height: 0;
+  /* 加载骨架屏是 position:absolute + inset:0 的覆盖层，需要本元素提供
+     定位上下文；否则它会向上找到 body 而铺出一整屏。 */
+  position: relative;
 }
 
 /* P3-1/2/3/6/7 列表交互样式
@@ -216,8 +219,16 @@
 #fm-bulkbar.on { display: flex; }
 #fm-bulkbar .count { font-weight: 600; margin-right: auto; }
 #fm-bulkbar button {
+  /* 侧栏宽度装不下 6 个中文按钮，flex 压缩会让文字折成两行。
+     改为方形图标按钮，文字一律不换行。 */
+  flex: 0 0 auto;
+  width: 28px;
   height: 28px;
-  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  white-space: nowrap;
   border: 1px solid var(--ui-border-strong);
   border-radius: var(--ui-radius);
   background: var(--ui-surface);
@@ -229,6 +240,9 @@
 #fm-bulkbar button:hover { background: var(--ui-hover-bg); }
 #fm-bulkbar button.danger { color: var(--ui-danger); border-color: var(--ui-danger); }
 #fm-bulkbar button.danger:hover { background: var(--ui-danger-soft); }
+#fm-bulkbar .bb-ico { display: block; pointer-events: none; }
+#fm-bulkbar button:hover .bb-ico { transform: scale(1.08); }
+#fm-bulkbar .bb-ico { transition: transform .16s ease; }
 
 /* ——— P3-6 三态 ——— */
 #fm-state {
@@ -253,8 +267,17 @@
 #fm-p3-toolbar.loading .fm-viewbtn,
 #fm-p3-toolbar.loading #fm-p3-selectall { pointer-events: none; opacity: 0.5; }
 
-/* P3-6 骨架：避免"点了没反应"的空白 */
-#fm-p3-skeleton { display: none; padding: 6px; }
+/* P3-6 骨架：避免"点了没反应"的空白。
+   原本是普通流里的块级元素，只有 8 行高，加载时下方直接露出列表白底，
+   中间横着一条"半灰半白"的分界线。改为铺满整个列表区的覆盖层。 */
+#fm-p3-skeleton {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 6px;
+  background: var(--ui-bg);
+}
 #fm-p3-skeleton.on { display: block; }
 #fm-p3-skeleton .sk-row {
   height: var(--ui-row-h);
@@ -359,4 +382,78 @@
   max-height: 160px;
   overflow: auto;
   font-size: var(--ui-fs-sm);
+}
+
+/* ===== 侧栏回收站入口 =====
+   原来是一个裸 button：emoji 图标 + 纯文字，容器 .sidebar-footer 没有任何
+   规则，按钮挤在 65px 高里，四边还挂着 transparent 边框。这里重做：线性
+   SVG 图标替代 emoji，悬停时背景与图标同步反馈，右侧留出计数徽标的位置。 */
+.sidebar-footer {
+  flex: 0 0 auto;
+  margin-top: auto;
+  padding: 8px;
+  border-top: 1px solid var(--ui-border, #e6e9ee);
+  background: var(--ui-surface-2, #f2f4f7);
+}
+
+.sidebar .sidebar-trash-btn,
+.sidebar-footer .sidebar-trash-btn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 38px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ui-radius, 8px);
+  background: var(--ui-surface, #fff);
+  color: var(--ui-text, #14181f);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color .14s ease, color .14s ease, border-color .14s ease;
+}
+.sidebar .sidebar-trash-btn:hover,
+.sidebar-footer .sidebar-trash-btn:hover {
+  background: var(--ui-surface-2, #f2f4f7);
+  color: var(--ui-text, #14181f);
+  border-color: var(--ui-border, #e6e9ee);
+}
+/* 图标比文字慢半拍地变暗，视线自然落到文字上 */
+.sidebar .sidebar-trash-btn:hover .stb-icon,
+.sidebar-footer .sidebar-trash-btn:hover .stb-icon { color: var(--ui-text, #14181f); }
+.sidebar .sidebar-trash-btn:active,
+.sidebar-footer .sidebar-trash-btn:active { background: var(--ui-surface-3, #e8ebef); }
+.sidebar .sidebar-trash-btn:focus-visible,
+.sidebar-footer .sidebar-trash-btn:focus-visible {
+  outline: 2px solid var(--ui-primary, #2563eb);
+  outline-offset: 1px;
+}
+
+.stb-icon {
+  display: inline-flex;
+  flex: 0 0 auto;
+  color: var(--ui-text-dim, #59626f);
+  transition: color .14s ease;
+}
+.stb-label { flex: 1 1 auto; min-width: 0; }
+/* 计数徽标：0 个时隐藏，不占视觉重量 */
+.stb-count {
+  flex: 0 0 auto;
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--ui-surface-3, #e8ebef);
+  color: var(--ui-text-dim, #59626f);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.stb-count[hidden] { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar-trash-btn, .stb-icon { transition-duration: .001ms; }
 }

@@ -1,3 +1,8 @@
+# Workspace is a local scratch/artifact area and is never committed.
+# This blanket rule must stay first: a stray `git add -A` would otherwise
+# sweep in session logs, captures and temporary scripts.
+workspace/
+
 # Python
 __pycache__/
 *.pyc
@@ -184,3 +189,9 @@ workspace/job-backup/
 
 # 一次性调试草稿，非源码
 workspace/p3-verify/
+
+# Local backup copies left behind by crashed edit sessions; never committed.
+*.bak
+*.bak2.*
+*.brokenbak
+*.brokenbak-*
