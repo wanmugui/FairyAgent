@@ -1,0 +1,534 @@
+{
+  "default_model": "deepseek-v4-flash",
+  "settings": {
+    "voice_auto_read": false,
+    "auto_fallback": true,
+    "default_model": "user_minimax-m3-1-flash",
+    "fallback_model": "deepseek-v4-flash",
+    "theme": "base"
+  },
+  "models": {
+    "deepseek-v4-flash": {
+      "display": "DeepSeek-V4-Flash",
+      "api": {
+        "base_url": "https://api.deepseek.com",
+        "api_key": "READ_FROM_DEEPSEEK_KEY_TXT",
+        "model": "deepseek-v4-flash",
+        "timeout_sec": 120,
+        "temperature": 0.4,
+        "max_tokens": 16384
+      }
+    },
+    "minimax-m3": {
+      "display": "MiniMax-M3",
+      "api": {
+        "base_url": "https://api.minimaxi.com/v1",
+        "api_key": "READ_FROM_MINIMAX_KEY_TXT",
+        "model": "MiniMax-M3",
+        "timeout_sec": 120,
+        "temperature": 0.4,
+        "max_tokens": 16384,
+        "max_retries": 3,
+        "retry_base_ms": 1000
+      }
+    },
+    "user_minimax-m3-1-flash": {
+      "display": "MiniMax M3.1 Flash",
+      "provider": "minimax",
+      "user": true,
+      "api": {
+        "base_url": "https://api.minimaxi.com/v1",
+        "api_key": "READ_FROM_LOCAL_SECRETS:user_minimax-m3-1-flash",
+        "model": "MiniMax-M3.1-Flash-Preview",
+        "timeout_sec": 120,
+        "temperature": 0.4,
+        "max_tokens": 16384
+      }
+    }
+  },
+  "workspace_dir": "workspace",
+  "use_mock": false,
+  "prompts": {
+    "system_path": "config/system/zh.md",
+    "user_path": "config/user.txt",
+    "modules_dir": "config/modules",
+    "subtask_system_path": "config/modules/subtask/system/zh.md",
+    "subtask_user_path": "config/modules/subtask/user/zh.md",
+    "subtask_continue_path": "config/modules/subtask/continue/zh.md"
+  },
+  "system_parts_dir": "config/system/parts/zh",
+  "skills_dir": "skills",
+  "history_dir": "runs",
+  "mock_file": "config/mock_responses.json",
+  "unifiedToolService": {
+    "endpoint": "http://127.0.0.1:8080/api/agent/tool_call",
+    "timeout": 120,
+    "bearerToken": ""
+  },
+  "httpTools": {
+    "ask_user": {
+      "enabled": true
+    },
+    "bash": {
+      "enabled": true
+    },
+    "powershell": {
+      "enabled": true
+    },
+    "create_subtask": {
+      "enabled": true
+    },
+    "document_parser": {
+      "enabled": true
+    },
+    "edit_file": {
+      "enabled": true
+    },
+    "get_current_time": {
+      "enabled": true
+    },
+    "glob": {
+      "enabled": true
+    },
+    "grep": {
+      "enabled": true
+    },
+    "html_to_png": {
+      "enabled": true
+    },
+    "computer_observe": {
+      "enabled": true
+    },
+    "computer_pointer": {
+      "enabled": true
+    },
+    "computer_keyboard": {
+      "enabled": true
+    },
+    "computer_window": {
+      "enabled": true
+    },
+    "computer_clipboard": {
+      "enabled": true
+    },
+    "browser": {
+      "enabled": true
+    },
+    "show_result": {
+      "enabled": true
+    },
+    "plan": {
+      "enabled": true
+    },
+    "image_generate": {
+      "enabled": true
+    },
+    "image_search": {
+      "enabled": true
+    },
+    "image_vqa": {
+      "enabled": true
+    },
+    "knowledge_download": {
+      "enabled": false
+    },
+    "knowledge_retrieve": {
+      "enabled": false
+    },
+    "memory_search": {
+      "enabled": true
+    },
+    "memory_invalidate_segment": {
+      "enabled": true
+    },
+    "memory_invalidate_interaction": {
+      "enabled": true
+    },
+    "memory_delete_segment": {
+      "enabled": true
+    },
+    "memory_delete_interaction": {
+      "enabled": true
+    },
+    "skill_search": {
+      "enabled": true
+    },
+    "read_file": {
+      "enabled": true
+    },
+    "reflection": {
+      "enabled": false,
+      "_comment": "reflection 工具开关（同步控制系统提示词中的反思模块）"
+    },
+    "web_search": {
+      "enabled": true
+    },
+    "web_fetch": {
+      "enabled": true
+    },
+    "write_file": {
+      "enabled": true
+    }
+  },
+  "tool_runtime": {
+    "executables": {
+      "python": "",
+      "shell": "",
+      "node": "",
+      "browser": ""
+    },
+    "tools": {
+      "ask_user": {
+        "backend": "local"
+      },
+      "bash": {
+        "backend": "local"
+      },
+      "powershell": {
+        "backend": "local"
+      },
+      "bash_job": {
+        "backend": "local"
+      },
+      "create_subtask": {
+        "backend": "local"
+      },
+      "document_parser": {
+        "backend": "local"
+      },
+      "edit_file": {
+        "backend": "local"
+      },
+      "get_current_time": {
+        "backend": "local"
+      },
+      "glob": {
+        "backend": "local"
+      },
+      "grep": {
+        "backend": "local"
+      },
+      "html_to_png": {
+        "backend": "local"
+      },
+      "computer_observe": {
+        "backend": "local"
+      },
+      "computer_pointer": {
+        "backend": "local"
+      },
+      "computer_keyboard": {
+        "backend": "local"
+      },
+      "computer_window": {
+        "backend": "local"
+      },
+      "computer_clipboard": {
+        "backend": "local"
+      },
+      "browser": {
+        "backend": "local"
+      },
+      "show_result": {
+        "backend": "local"
+      },
+      "plan": {
+        "backend": "local"
+      },
+      "image_search": {
+        "backend": "local"
+      },
+      "image_generate": {
+        "backend": "local"
+      },
+      "image_vqa": {
+        "backend": "local"
+      },
+      "knowledge_download": {
+        "backend": "http"
+      },
+      "knowledge_retrieve": {
+        "backend": "http"
+      },
+      "memory_search": {
+        "backend": "local"
+      },
+      "memory_invalidate_segment": {
+        "backend": "local"
+      },
+      "memory_invalidate_interaction": {
+        "backend": "local"
+      },
+      "memory_delete_segment": {
+        "backend": "local"
+      },
+      "memory_delete_interaction": {
+        "backend": "local"
+      },
+      "skill_search": {
+        "backend": "local"
+      },
+      "read_file": {
+        "backend": "local"
+      },
+      "reflection": {
+        "backend": "http"
+      },
+      "write_file": {
+        "backend": "local"
+      },
+      "web_search": {
+        "backend": "local"
+      },
+      "web_fetch": {
+        "backend": "local"
+      }
+    },
+    "retry_count": 1,
+    "timeouts": {},
+    "approval": {},
+    "approval_mode": "allow"
+  },
+  "bash_policy": {
+    "enabled": true,
+    "_comment": "Bash command policy: deny_commands/deny_paths are checked before any shell spawn. The model can request a wider permission with sandbox_permissions=danger-full-access plus justification; the host approval layer decides whether to grant it and the result records the request. allow_commands, when non-empty, becomes a strict whitelist; leave empty to permit any non-denied command. strict_deny_only=true skips the default deny list and uses only what you set here.",
+    "deny_commands": [
+      "format",
+      "format-volume",
+      "clear-disk",
+      "initialize-disk",
+      "diskpart",
+      "fdisk",
+      "mkfs",
+      "dd",
+      "sudo",
+      "su",
+      "runas",
+      "shutdown",
+      "stop-computer",
+      "reboot",
+      "restart-computer",
+      "halt",
+      "poweroff",
+      "init",
+      "netsh",
+      "iptables"
+    ],
+    "deny_paths": [
+      "C:\\Windows",
+      "C:\\Windows\\System32",
+      "C:\\Program Files",
+      "C:\\Program Files (x86)",
+      "/etc",
+      "/boot",
+      "/usr/bin",
+      "/usr/sbin",
+      "/sbin"
+    ]
+  },
+  "segmented_memory": {
+    "enabled": true,
+    "_comment": "按用户请求、流式回复和工具操作实时分段；每段封口后异步抽取原文 KEY，并写入分段索引。",
+    "key_extraction": "llm",
+    "max_segment_chars": 4000,
+    "max_segment_steps": 8,
+    "max_root_index_entries": 80,
+    "prompt_key_limit": 80,
+    "key_extraction_timeout_sec": 20,
+    "key_wait_timeout_sec": 3,
+    "max_concurrent_keys": 2
+  },
+  "tools_schemas": "config/tools/schemas.json",
+  "max_steps": 0,
+  "summary_threshold_tokens": 200000,
+  "summary_retain_tokens": 30000,
+  "tool_score_cleanup": {
+    "enabled": true,
+    "endpoint": "https://classifier.dev/",
+    "tier": "fast",
+    "threshold": 0.6,
+    "trigger_tokens": 40000,
+    "trigger_on_stage_boundary": true,
+    "stage_boundary_tools": [
+      "create_subtask"
+    ],
+    "min_runes": 400,
+    "max_candidates": -1,
+    "max_follow_up_runes": 800,
+    "timeout_sec": 30,
+    "fail_open": true,
+    "exclude_tools": [
+      "ask_user",
+      "create_subtask"
+    ]
+  },
+  "skills": [
+    {
+      "name": "daily-news",
+      "description": "当用户用中文/英文问'今天的新闻'/'daily news'/'每日新闻'/'今天发生了什么'/'今天有什么重大新闻'/'today's news'/'全球今日新闻'/'全球新闻'/'今日头条'/'每日要闻'时使用。本 skill 直接抓取权威中文源（人民日报、新华网、央视、环球时报）+ 热搜榜（微博、百度、知乎），过滤广告与娱乐明星，输出当日 Markdown 简报到本地文件。比 web_search 更适合中文时政与当日热点，但返回的是'标题+链接'，要拿到正文请用 web_fetch 跟进。",
+      "location": "/skills/daily-news",
+      "enabled": true
+    },
+    {
+      "name": "deep-research",
+      "description": "当用户提出深度调研、报告生成等请求时使用。请求技能要求先澄清需求，再由主线程拆步骤、按步骤分发子任务，最后由主线程统一综合，并按交付形态决定直接回复或文件成文。",
+      "location": "/skills/deep-research"
+    },
+    {
+      "name": "document-writing",
+      "description": "当任务进入结构化文档的成文阶段时使用，例如报告、proposal、spec、decision doc、研究报告最终撰写、长篇结构化 Markdown。仅在 writing / final synthesis 阶段触发，不用于前期搜索、取证、subtask 材料收集。",
+      "location": "/skills/document-writing"
+    },
+    {
+      "name": "ppt-maker",
+      "description": "当用户需要新建整套 PPT、继续已有 PPT 工件、或从上游半成品报告启动 PPT 生成时使用。用户要求制作PPT时，必须立即读取此skill。此skill负责汇总任务信息，整理参考数据，然后分发到对应的制作模式 Skill。",
+      "location": "/skills/ppt-maker"
+    },
+    {
+      "name": "ppt-no-template-mode",
+      "description": "当 PPT 任务已确认使用无模板模式（ppt_mode=no-template），且 task_pack.json、info_pack.json 和 deck 工作目录均就绪时使用。负责设计信息生成、大纲生成、资产规划、逐页 HTML 生成和 review/rewrite 全链路。只要 ppt-maker 分发到无模板模式，都必须进入本 Skill。",
+      "location": "/skills/ppt-no-template-mode"
+    },
+    {
+      "name": "ppt-creative-mode",
+      "description": "当 PPT 任务确认使用创意模式（ppt_mode=creative），且 task_pack.json / info_pack.json / deck 工作目录均就绪时使用。负责风格生成、大纲生成、逐页并发调用 creative_page_render API 出图的全链路。只要 ppt-maker 分发到创意模式，都必须进入本 Skill。",
+      "location": "/skills/ppt-creative-mode"
+    },
+    {
+      "name": "fairy-engineering",
+      "description": "当用户要求修改、修复、重构或实现 Fairy 仓库中的代码、配置、前端交互、Agent 运行时或发布流程时使用。强制建立回归基线并运行相关自动化回归；任何前端、UI、交互或视觉改动必须完成真实浏览器点击测试，禁止只凭构建通过宣告完成。",
+      "location": "/skills/fairy-engineering",
+      "enabled": true
+    },
+    {
+      "name": "fairy-reference-analysis",
+      "description": "当用户希望从游戏、桌面应用、网站或软件中提炼 UI/UX、视觉样式、交互流程、玩法机制、经济系统或结构设计，或在明确授权范围内分析本地应用与协议时使用。优先采用截图、录屏、公开界面、DOM/日志和非加密数据；禁止绕过 DRM、反作弊、付费、账号或许可证限制，也不直接复制或再分发目标资产。",
+      "location": "/skills/fairy-reference-analysis",
+      "enabled": true
+    },
+    {
+      "name": "bpy-model",
+      "description": "Use when 用 Blender/bpy 做 3D 建模与渲染——写场景 JSON、造齿轮/圆柱/圆环等基本体或挤出体、存 .blend、渲静态图或渲旋转动画序列、转视频。触发场景：「用 bpy 建模」「bpy 渲染」「Blender 无头建模」「做场景 JSON」「渲个动画序列」「模型转视频」「齿轮模型」「extrusion 挤出」「spin 旋转动画」。要写 .scad 参数化模型或 3D 打印件请改用 3d-model 技能（OpenSCAD），两者不要混用。",
+      "location": "/skills/bpy-model",
+      "enabled": true
+    },
+    {
+      "name": "gsap",
+      "description": "HyperFrames 的 GSAP 动画参考。涵盖 gsap.to()、from()、fromTo()、easing、stagger、defaults、timelines（gsap.timeline()、position 参数、labels、嵌套、playback），以及性能（transforms、will-change、quickTo）。在 HyperFrames 合成中编写 GSAP 动画时使用。",
+      "location": "~/.fairy/skills/gsap",
+      "enabled": true
+    }
+  ],
+  "reflection": {
+    "enabled": false,
+    "_comment": "反思开关：true=启用（且仅在多步/长链路任务注入，见 agentloop.go toolsUsedThisTurn）；false=完全关闭反思"
+  },
+  "tools": {
+    "_comment": "生产工具配置兼容字段。当前本地 Agent 直接消费 readFile；pptTools（如配置）会传给本地环境工具。其余服务能力通过 unifiedToolService 调用，不再自动转换为旧 TOOL_* 子进程环境变量。",
+    "webFetch": {
+      "_comment": "web_fetch 的生产摘要模型兼容字段；本地 web_fetch 直接抓取正文并支持 file_mode=stateless 二进制下载，仅在切换到 HTTP backend 时需要。",
+      "summaryModelName": "MaaS_Cl_Sonnet_46_Multi_Modal",
+      "summaryModelBaseUrl": "https://clotho-test.xiaohuanxiong.com/v2/llm"
+    },
+    "webBudget": {
+      "_comment": "Codex 风格动态 web 输出预算：按当前 prompt 占用、输出预留和 summary 阈值计算剩余空间，再把本轮预算分给并行 web_search/web_fetch。不是额外摘要模型。",
+      "enabled": true,
+      "contextWindowTokens": 128000,
+      "outputReserveTokens": 16384,
+      "safetyReserveTokens": 8000,
+      "minTurnTokens": 2000,
+      "maxTurnTokens": 32000,
+      "turnSharePercent": 50,
+      "searchMaxResults": 8,
+      "searchSnippetChars": 600,
+      "fetchMaxChars": 24000
+    },
+    "readFile": {
+      "_comment": "read_file 大文件【分段读取】配置：文件超过 segmentReadMaxTokens 时按段读，防止单次返回过大撑爆上下文；超过 maxReadFileSizeBytes(10MB) 不直读",
+      "segmentReadMaxTokens": 8192,
+      "segmentReadMinTokens": 200,
+      "maxReadFileSizeBytes": 10485760
+    },
+    "imageVQA": {
+      "_comment": "image_vqa 本地视觉问答：直接调用 DeepSeek OpenAI 兼容多模态接口，不依赖本地 8080 工具网关。",
+      "modelName": "MiniMax-M3.1-Flash-Preview",
+      "baseUrl": "https://api.minimaxi.com/v1",
+      "apiKey": "READ_FROM_MINIMAX_KEY_TXT",
+      "timeoutSec": 120,
+      "maxTokens": 4096,
+      "temperature": 0.1,
+      "maxRetries": 2,
+      "retryBaseMs": 1000,
+      "maxImageBytes": 16777216
+    },
+    "imageGenerate": {
+      "_comment": "image_generate 本地 MiniMax 文生图：POST {baseUrl}/image_generation，Bearer 鉴权，复用根目录 MINIMAX_key.txt。prompt 由 Agent 按 skill 模板生成后传入，工具不改写 prompt；prompt_optimizer 默认关闭。aspectRatio 用 MiniMax 支持的档位（1:1 / 16:9 / 4:3 / 3:2 / 2:3 / 3:4 / 9:16 / 21:9），调用时也可直接传 aspect_ratio 或用 1024x1024 这类像素尺寸映射到最接近档位。",
+      "modelName": "image-01",
+      "baseUrl": "https://api.minimaxi.com/v1",
+      "apiKey": "READ_FROM_MINIMAX_KEY_TXT",
+      "aspectRatio": "16:9",
+      "timeoutSec": 180,
+      "maxRetries": 2,
+      "retryBaseMs": 1500,
+      "maxImages": 4,
+      "maxImageBytes": 25165824
+    },
+    "imageSearch": {
+      "_comment": "image_search 本地多源搜索：按 sourcePriority 顺序尝试，凑够 top_k 即停止，前面的源不足或失败时自动回退下一个；调用时可用 sources 参数单次覆盖顺序。",
+      "sourcePriority": [
+        "bing",
+        "baidu",
+        "wikimedia"
+      ],
+      "timeoutSec": 45,
+      "maxImageBytes": 20971520
+    },
+    "documentParser": {
+      "_comment": "document_parser【文档解析】本地解析：txt/md/csv/tsv/json/log/html/xml/yaml 直读，docx 用 python-docx，pdf 用 pdfminer.six，pptx/xlsx 用标准库；serviceUrl/parserEndpoint 仅保留给旧 HTTP 后端",
+      "serviceUrl": "http://python-tool-server:3002",
+      "parserEndpoint": "http://headless-svc-uniparse-app.knowledge:8000",
+      "uploadDir": "document_parser",
+      "outputMaxTokens": 4000,
+      "outputTruncateStrategy": "middle",
+      "tableMaxDisplayRows": 10
+    },
+    "rerank": {
+      "_comment": "rerank【知识库重排】服务（生产内网，本地知识库流程一般用不到）",
+      "serviceUrl": "http://rerank-inner.knowledge.svc.cluster.local:44444",
+      "chunkMinTokens": 200,
+      "chunkOverlapTokens": 0,
+      "topK": 10,
+      "threshold": 0.2
+    }
+  },
+  "_comment": "Fairy 单文件多模型配置：用 -ModelId（缺省用 default_model）选择 models 中的条目，其余设置由所有模型共享；api_key 占位符 READ_FROM_* 会从仓库根目录的同名 txt 文件解析",
+  "skill_routing": {
+    "enabled": true,
+    "always": [],
+    "recall_limit": 20,
+    "inject_limit": 3,
+    "full_body_limit": 2,
+    "threshold": 0.55,
+    "endpoint": "https://classifier.dev/",
+    "tier": "fast",
+    "timeout_sec": 30,
+    "fail_open": true,
+    "cache_ttl_sec": 600,
+    "max_body_runes": 12000
+  },
+  "memory_summarize": false,
+  "generate_title": false,
+  "mcp_servers": {
+    "bpy": {
+      "enabled": true,
+      "transport": "stdio",
+      "command": "/home/user/miniforge3/envs/bpyenv/bin/python3.13",
+      "args": [
+        "/home/user/Fairy/skills/3d-model/scripts/bpy_mcp_server.py"
+      ],
+      "cwd": "/home/user/Fairy/skills/3d-model/scripts",
+      "startup_timeout_sec": 90,
+      "tool_prefix": "bpy"
+    }
+  }
+}

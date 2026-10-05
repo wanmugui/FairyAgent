@@ -1,0 +1,190 @@
+{
+    "description": "Tests for behavior/report separation (唐宗恺 design)",
+    "cases": [
+        {
+            "name": "compliant: intermediate uses <behavior>",
+            "user": "query: what is the time",
+            "mock_steps": [
+                {
+                    "content": "<behavior><des>getting current time</des></behavior>",
+                    "tool_calls": [
+                        {
+                            "id": "c1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_current_time",
+                                "arguments": "{}"
+                            }
+                        }
+                    ],
+                    "finish_reason": "tool_calls"
+                },
+                {
+                    "content": "<report>current time is 14:00</report>",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "behavior",
+                "step_1_compliant": true,
+                "step_2_route": "report",
+                "step_2_compliant": true
+            }
+        },
+        {
+            "name": "violation: final uses <behavior>",
+            "user": "hello",
+            "mock_steps": [
+                {
+                    "content": "<behavior><des>replying</des></behavior>",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "behavior_violation",
+                "step_1_compliant": true,
+                "final_content_contains": "<report>"
+            }
+        },
+        {
+            "name": "violation: final uses legacy <response>",
+            "user": "hello",
+            "mock_steps": [
+                {
+                    "content": "<response>hi there</response>",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "legacy_response",
+                "step_1_compliant": true,
+                "final_content_contains": "hi there"
+            }
+        },
+        {
+            "name": "compliant: intermediate behavior + tool_call + final report",
+            "user": "make a slide deck",
+            "mock_steps": [
+                {
+                    "content": "<behavior><des>checking existing files</des></behavior>",
+                    "tool_calls": [
+                        {
+                            "id": "c1",
+                            "type": "function",
+                            "function": {
+                                "name": "glob",
+                                "arguments": "{}"
+                            }
+                        }
+                    ],
+                    "finish_reason": "tool_calls"
+                },
+                {
+                    "content": "<behavior><des>reading slide template</des></behavior>",
+                    "tool_calls": [
+                        {
+                            "id": "c2",
+                            "type": "function",
+                            "function": {
+                                "name": "read_file",
+                                "arguments": "{}"
+                            }
+                        }
+                    ],
+                    "finish_reason": "tool_calls"
+                },
+                {
+                    "content": "<report># Slide Deck Plan\n\n3 slides:\n1. Title\n2. Body\n3. End",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "behavior",
+                "step_2_route": "behavior",
+                "step_3_route": "report",
+                "all_compliant": true
+            }
+        },
+        {
+            "name": "autowrap: intermediate bare text gets wrapped as behavior",
+            "user": "what is today",
+            "mock_steps": [
+                {
+                    "content": "let me check the current date",
+                    "tool_calls": [
+                        {
+                            "id": "c1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_current_time",
+                                "arguments": "{}"
+                            }
+                        }
+                    ],
+                    "finish_reason": "tool_calls"
+                },
+                {
+                    "content": "<report>today is 2026-07-23</report>",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "behavior_autowrap",
+                "step_2_route": "report",
+                "step_1_content_contains": "<behavior><des>"
+            }
+        },
+        {
+            "name": "violation: image link outside report in final",
+            "user": "show me a picture",
+            "mock_steps": [
+                {
+                    "content": "![image](http://example.com/img.png)<report>here it is</report>",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "report_autowrap",
+                "step_1_compliant": true,
+                "final_content_contains": "<report>"
+            }
+        },
+        {
+            "name": "tool-only intermediate with empty content does not crash",
+            "user": "create a todo",
+            "mock_steps": [
+                {
+                    "content": "",
+                    "tool_calls": [
+                        {
+                            "id": "c1",
+                            "type": "function",
+                            "function": {
+                                "name": "get_current_time",
+                                "arguments": "{}"
+                            }
+                        }
+                    ],
+                    "finish_reason": "tool_calls"
+                },
+                {
+                    "content": "<report>todo created</report>",
+                    "tool_calls": [],
+                    "finish_reason": "stop"
+                }
+            ],
+            "expect": {
+                "step_1_route": "tool_only",
+                "step_1_compliant": true,
+                "step_2_route": "report",
+                "step_2_compliant": true
+            }
+        }
+    ]
+}

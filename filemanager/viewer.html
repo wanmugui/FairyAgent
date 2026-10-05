@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>文档查看器</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; background: #1e1e1e; }
+    .viewer-container { height: 100%; display: flex; flex-direction: column; }
+    .toolbar {
+      height: 40px;
+      background: #2d2d30;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      gap: 12px;
+      border-bottom: 1px solid #3c3c3c;
+    }
+    .filename { color: #fff; font-size: 13px; }
+    .viewer { flex: 1; overflow: auto; background: #0a0a0c; }
+    .page-info { color: #969696; font-size: 12px; }
+    .btn {
+      padding: 4px 12px;
+      border-radius: 3px;
+      border: none;
+      cursor: pointer;
+      font-size: 12px;
+      background: #0e639c;
+      color: #fff;
+    }
+    .btn:disabled { background: #555; cursor: not-allowed; }
+    html.embedded .toolbar {
+      height: 36px;
+      padding: 0 10px;
+      gap: 8px;
+      background: #242428;
+    }
+    html.embedded .filename {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    iframe, .content { width: 100%; height: 100%; border: none; }
+    .html-frame { display: block; width: 100%; height: 100%; border: 0; background: #fff; }
+    .image-stage {
+      min-width: 100%;
+      min-height: 100%;
+      padding: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .media-image {
+      display: block;
+      max-width: 100%;
+      max-height: calc(100vh - 88px);
+      object-fit: contain;
+      box-shadow: 0 10px 34px rgba(0, 0, 0, .42);
+    }
+    .text-preview {
+      min-height: 100%;
+      margin: 0;
+      padding: 24px 28px 48px;
+      overflow: auto;
+      background: #fff;
+      color: #24292f;
+      font: 13px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .report-content {
+      max-width: 920px;
+      min-height: 100%;
+      margin: 0 auto;
+      padding: 36px 42px 64px;
+      background: #fff;
+      color: #202734;
+      font: 15px/1.75 Georgia, "Noto Serif CJK SC", "Microsoft YaHei", serif;
+    }
+    .report-content h1,
+    .report-content h2,
+    .report-content h3,
+    .report-content h4 {
+      margin: 1.2em 0 .55em;
+      color: #111827;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+      line-height: 1.35;
+    }
+    .report-content h1 { font-size: 27px; }
+    .report-content h2 { font-size: 22px; }
+    .report-content h3 { font-size: 18px; }
+    .report-content h4 { font-size: 16px; }
+    .report-content p { margin: .7em 0; }
+    .report-content ul,
+    .report-content ol { margin: .65em 0; padding-left: 1.7em; }
+    .report-content li { margin: .25em 0; }
+    .report-content code {
+      padding: 1px 5px;
+      border-radius: 4px;
+      background: #eef1f5;
+      font-family: Consolas, monospace;
+      font-size: .9em;
+    }
+    .report-content pre {
+      padding: 14px;
+      overflow: auto;
+      border-radius: 8px;
+      background: #111827;
+      color: #e5e7eb;
+      font: 12px/1.55 Consolas, monospace;
+    }
+    .report-content pre code { padding: 0; background: transparent; color: inherit; }
+    .report-content blockquote {
+      margin: 1em 0;
+      padding: .4em 1em;
+      border-left: 3px solid #4f87c7;
+      background: #f4f8fc;
+      color: #435269;
+    }
+    .report-content table {
+      width: 100%;
+      margin: 1em 0;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .report-content th,
+    .report-content td {
+      padding: 7px 9px;
+      border: 1px solid #d9e0e8;
+      text-align: left;
+      vertical-align: top;
+    }
+    .report-content th { background: #f3f6f9; }
+    .report-content a { color: #2368a5; }
+    .docx-preview-stage {
+      min-height: 100%;
+      padding: 20px;
+      background: #34373c;
+    }
+    .docx-preview-stage .docx {
+      margin: 0 auto 18px;
+      background: #fff;
+      box-shadow: 0 8px 30px rgba(0, 0, 0, .32);
+    }
+    
+    /* 文档内容样式 */
+    .doc-content { padding: 40px; max-width: 800px; margin: 0 auto; font-family: Georgia, serif; line-height: 1.8; color: #333; }
+    .doc-content h1 { font-size: 28px; margin: 24px 0 16px; }
+    .doc-content h2 { font-size: 22px; margin: 20px 0 12px; }
+    .doc-content p { margin: 12px 0; }
+    .doc-content table { border-collapse: collapse; width: 100%; margin: 16px 0; }
+    .doc-content td, .doc-content th { border: 1px solid #ddd; padding: 8px 12px; }
+    .doc-content th { background: #f5f5f5; }
+    
+    .loading { display: flex; align-items: center; justify-content: center; height: 100%; color: #666; }
+
+    /* ----- Spotify/网易云-style music player ----- */
+    .music-stage {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 100vh;
+      max-width: none;
+      margin: 0;
+      padding: 40px 48px 48px;
+      box-sizing: border-box;
+      background:
+        radial-gradient(ellipse at 20% 0%, #2b1a4d 0%, rgba(43,26,77,0) 55%),
+        linear-gradient(180deg, #17151c 0%, #0a0a0c 100%);
+      color: #f4f4f4;
+      display: grid;
+      grid-template-columns: 300px 1fr;
+      grid-template-rows: auto auto auto auto;
+      gap: 0 32px;
+      align-content: start;
+    }
+    /* Cover + vinyl-behind-cover (网易云 layout): the record peeks out to
+       the right of the square cover, and BOTH rotate while playing. */
+    .music-art {
+      grid-column: 1; grid-row: 1 / span 4;
+      position: relative;
+      width: 300px;
+      height: 300px;
+      align-self: center;
+    }
+    .music-disc {
+      position: absolute;
+      top: 30px;
+      left: 60px;
+      width: 240px;
+      height: 240px;
+      border-radius: 50%;
+      background:
+        repeating-radial-gradient(circle at center,
+          #0c0c0c 0, #0c0c0c 1px,
+          #222 1.6px, #222 2.2px,
+          #090909 3px),
+        radial-gradient(circle at center, #1a1a1a 0%, #050505 82%);
+      box-shadow:
+        0 10px 28px rgba(0, 0, 0, 0.6),
+        inset 0 0 24px rgba(255, 255, 255, 0.03);
+      animation: vinyl-spin 1.8s linear infinite;
+      animation-play-state: paused;
+    }
+    .music-stage.spinning .music-disc { animation-play-state: running; }
+    @keyframes vinyl-spin {
+      from { transform: rotate(0deg); }
+      to   { transform: rotate(360deg); }
+    }
+    .music-disc-label {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 84px;
+      height: 84px;
+      margin: -42px 0 0 -42px;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #ffe9b8 0%, #f1c772 55%, #b07f1e 100%);
+      box-shadow: inset 0 0 4px rgba(0, 0, 0, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #5a3b00;
+      padding: 6px;
+      overflow: hidden;
+      word-break: break-all;
+      line-height: 1.3;
+    }
+    .music-disc-label::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 10px;
+      height: 10px;
+      margin: -5px 0 0 -5px;
+      border-radius: 50%;
+      background: #17151c;
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.45);
+    }
+    /* Cover art — sits on top of the record. Doubles as play/pause. */
+    .music-cover {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 240px;
+      height: 240px;
+      border-radius: 12px;
+      background:
+        linear-gradient(135deg, #5b2bd6 0%, #8a4fff 50%, #ff6ec7 100%);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(255, 255, 255, 0.08);
+      cursor: pointer;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+    }
+    .music-cover:hover { transform: scale(1.02); }
+    .music-cover-glyph {
+      font-size: 96px;
+      font-weight: 200;
+      color: rgba(255, 255, 255, 0.9);
+      text-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+      user-select: none;
+    }
+    /* Track meta block to the right of cover. */
+    .music-meta {
+      grid-column: 2; grid-row: 1;
+      align-self: center;
+      min-width: 0;
+    }
+    .music-title {
+      font-size: 26px;
+      font-weight: 700;
+      color: #fff;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .music-sub {
+      font-size: 13px;
+      color: #b6b6b6;
+      margin-top: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* Scrub bar — right column, under the title. */
+    .music-scrub {
+      grid-column: 2; grid-row: 2;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-top: 18px;
+    }
+    .music-time {
+      font-size: 11px;
+      font-variant-numeric: tabular-nums;
+      color: #b3b3b3;
+      min-width: 38px;
+      text-align: center;
+    }
+    .music-track {
+      position: relative;
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.10);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .music-track:hover { height: 6px; }
+    .music-buffered {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 0%;
+      background: rgba(255, 255, 255, 0.18);
+      border-radius: 2px;
+    }
+    .music-progress {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 0%;
+      background: linear-gradient(90deg, #8a4fff, #ff6ec7);
+      border-radius: 2px;
+    }
+    .music-handle {
+      position: absolute;
+      left: 0%;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin: -6px 0 0 -6px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .music-track:hover .music-handle,
+    .music-track.dragging .music-handle { opacity: 1; }
+    /* Transport row (5 buttons in a row). */
+    .music-transport {
+      grid-column: 2; grid-row: 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 20px;
+    }
+    .music-btn {
+      appearance: none;
+      background: transparent;
+      border: 0;
+      color: #d8d8d8;
+      font-size: 22px;
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.12s ease, color 0.12s ease, background 0.12s ease;
+    }
+    .music-btn:hover { color: #fff; transform: scale(1.1); }
+    .music-btn.active { color: #1ed760; }
+    .music-play {
+      width: 56px;
+      height: 56px;
+      background: #fff;
+      color: #000;
+      font-size: 28px;
+    }
+    .music-play:hover { background: #fff; color: #000; transform: scale(1.06); }
+    /* Volume row. */
+    .music-volume {
+      grid-column: 2; grid-row: 4;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      justify-content: center;
+    }
+    .music-volicon {
+      font-size: 18px;
+      width: 32px;
+      height: 32px;
+    }
+    .music-voltrack {
+      position: relative;
+      flex: 0 1 180px;
+      max-width: 180px;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.10);
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .music-voltrack:hover { height: 6px; }
+    .music-volfill {
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 80%;
+      background: #fff;
+      border-radius: 2px;
+    }
+    .music-volhandle {
+      position: absolute;
+      left: 80%;
+      top: 50%;
+      width: 12px;
+      height: 12px;
+      margin: -6px 0 0 -6px;
+      border-radius: 50%;
+      background: #fff;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+      opacity: 0;
+      transition: opacity 0.15s ease;
+    }
+    .music-voltrack:hover .music-volhandle,
+    .music-voltrack.dragging .music-volhandle { opacity: 1; }
+    /* Hide the underlying <audio> driver behind the custom music player.
+       Video keeps its own class and MUST stay visible. */
+    .media-driver-audio { display: none !important; }
+    /* Autoplay-policy fallback overlay: click once to grant the gesture. */
+    .autoplay-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 900;
+      background: rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: #fff;
+      font-family: inherit;
+    }
+    .autoplay-btn {
+      width: 84px;
+      height: 84px;
+      border-radius: 50%;
+      background: #fff;
+      color: #000;
+      font-size: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      box-shadow: 0 6px 24px rgba(0, 0, 0, 0.5);
+    }
+    .autoplay-hint { font-size: 14px; letter-spacing: 1px; }
+    .media-video {
+      display: block;
+      max-width: 100%;
+      max-height: 82vh;
+      margin: 16px auto;
+      background: #000;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    }
+    /* Narrow preview pane: stack the art above the controls. */
+    @media (max-width: 700px) {
+      .music-stage {
+        grid-template-columns: 1fr;
+        padding: 28px 24px 36px;
+        justify-items: center;
+      }
+      .music-art { grid-column: 1; grid-row: 1; }
+      .music-meta, .music-scrub, .music-transport, .music-volume {
+        grid-column: 1;
+      }
+      .music-meta { grid-row: 2; margin-top: 20px; text-align: center; }
+      .music-scrub { grid-row: 3; width: 100%; }
+      .music-transport { grid-row: 4; }
+      .music-volume { grid-row: 5; }
+    }
+  </style>
+</head>
+<body>
+  <div class="viewer-container">
+    <div class="toolbar">
+      <span class="filename" id="fileName"></span>
+      <button class="btn" id="prevBtn" onclick="prevPage()">◀</button>
+      <span class="page-info" id="pageInfo"></span>
+      <button class="btn" id="nextBtn" onclick="nextPage()">▶</button>
+    </div>
+    <div class="viewer" id="viewer">
+      <div class="loading">加载中...</div>
+    </div>
+  </div>
+
+  <!-- Local DOCX renderer: JSZip + docx-preview -->
+  <script src="/vendor/docx/jszip.min.js"></script>
+  <script src="/vendor/docx/docx-preview.min.js"></script>
+  <!-- SheetJS for XLSX -->
+  <script src="/vendor/xlsx/xlsx.full.min.js"></script>
+  <!-- PDF.js -->
+  <script src="/vendor/pdfjs/pdf.min.js"></script>
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const embedded = urlParams.get('embedded') === '1';
+    if (embedded) document.documentElement.classList.add('embedded');
+    const filePath = urlParams.get('file') || '';
+    const fileName = filePath ? filePath.split(/[\\/]/).pop() : '未知';
+    const ext = fileName.split('.').pop().toLowerCase();
+    const fileUrl = pathValue =>
+      '/api/download?path=' + encodeURIComponent(pathValue);
+    
+    document.getElementById('fileName').textContent = fileName;
+
+    // Media extensions handled WITHOUT a blob download: the <audio>/<video>
+    // element streams straight from /api/download using HTTP Range requests,
+    // so a 2GB mp4 starts playing instantly instead of being pulled into
+    // memory first.
+    const AUDIO_EXTS = ['mp3','wav','m4a','aac','ogg','oga','opus','flac','weba'];
+    const VIDEO_EXTS = ['mp4','webm','mov','m4v','mkv','avi','ogv'];
+    const IMAGE_EXTS = ['png','jpg','jpeg','gif','webp','bmp','svg'];
+    const HTML_EXTS = ['html','htm'];
+    const TEXT_EXTS = [
+      'txt','md','markdown','csv','tsv','json','jsonl','log','xml','yaml','yml',
+      'css','js','jsx','ts','tsx','py','go','rs','java','rb','sh','bash','ps1','bat',
+    ];
+
+    async function loadFile() {
+      const viewer = document.getElementById('viewer');
+
+      try {
+        // Media files stream natively — never blob them (a 2GB mp4 would
+        // otherwise be read fully into memory before rendering).
+        if (VIDEO_EXTS.includes(ext)) {
+          viewMedia('video', fileName);
+          return;
+        }
+        if (AUDIO_EXTS.includes(ext)) {
+          viewMedia('audio', fileName);
+          return;
+        }
+        if (IMAGE_EXTS.includes(ext)) {
+          viewImage(fileName);
+          return;
+        }
+        if (HTML_EXTS.includes(ext)) {
+          viewHTML(fileName);
+          return;
+        }
+        if (TEXT_EXTS.includes(ext)) {
+          await viewText();
+          return;
+        }
+
+        // Match the filemanager's local-file behavior for standalone and
+        // embedded viewers: any local path the server can browse is readable.
+        const response = await fetch(fileUrl(filePath));
+        if (!response.ok) {
+          viewer.innerHTML = '<div class="loading">加载失败: HTTP ' + response.status + ' — ' + (await response.text()) + '</div>';
+          return;
+        }
+        const blob = await response.blob();
+
+        if (ext === 'pdf') {
+          await viewPDF(blob);
+        } else if (ext === 'docx') {
+          await viewDOCX(blob);
+        } else if (ext === 'xlsx' || ext === 'xls') {
+          await viewXLSX(blob);
+        } else if (ext === 'ppt' || ext === 'pptx') {
+          await viewPPTX(blob);
+        } else {
+          viewer.innerHTML = '<div class="loading">不支持此格式: ' + ext + '</div>';
+        }
+      } catch (err) {
+        viewer.innerHTML = '<div class="loading">加载失败: ' + err.message + '</div>';
+      }
+    }
+
+    function viewImage(name) {
+      const viewer = document.getElementById('viewer');
+      const src = fileUrl(filePath);
+      viewer.innerHTML = '<div class="image-stage"><img class="media-image" alt=""></div>';
+      const image = viewer.querySelector('img');
+      image.src = src;
+      image.alt = name;
+      document.getElementById('pageInfo').textContent = '图片';
+      document.getElementById('prevBtn').style.display = 'none';
+      document.getElementById('nextBtn').style.display = 'none';
+    }
+
+    function viewHTML(name) {
+      const viewer = document.getElementById('viewer');
+      const src = fileUrl(filePath);
+      viewer.innerHTML = '<iframe class="html-frame" title=""></iframe>';
+      const frame = viewer.querySelector('iframe');
+      frame.src = src;
+      frame.title = name;
+      document.getElementById('pageInfo').textContent = 'HTML';
+      document.getElementById('prevBtn').style.display = 'none';
+      document.getElementById('nextBtn').style.display = 'none';
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, ch => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+      })[ch]);
+    }
+
+    function safeLink(url) {
+      const value = String(url || '').trim();
+      if (/^(https?:|mailto:|#)/i.test(value)) return value;
+      if (/^(\.{0,2}\/|\/)/.test(value)) return value;
+      if (/^[A-Za-z]:[\\/]/.test(value)) return '/api/download?path=' + encodeURIComponent(value);
+      if (/^(workspace|skills|frontend)[\\/]/i.test(value)) return '/api/download?path=' + encodeURIComponent(value);
+      return '';
+    }
+
+    function renderInline(value) {
+      const cites = [];
+      let text = String(value || '').replace(/<cite\b[^>]*>[\s\S]*?<\/cite>/gi, match => {
+        const url = (match.match(/\b(?:url|path)="([^"]*)"/i) || [,''])[1];
+        const inner = (match.match(/>([\s\S]*?)<\/cite>/i) || [,''])[1]
+          .replace(/<[^>]*>/g, '').trim();
+        const label = escapeHtml(inner || 'source');
+        const href = safeLink(url);
+        const token = '\u0000CITE' + cites.length + '\u0000';
+        cites.push(href
+          ? '<a href="' + escapeHtml(href) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'
+          : label);
+        return token;
+      });
+      text = escapeHtml(text)
+        .replace(/`([^`]+)`/g, '<code>$1</code>')
+        .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*([^*]+)\*/g, '<em>$1</em>')
+        .replace(/\[([^\]]+)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g, (match, label, href) => {
+          const safe = safeLink(href.replace(/&amp;/g, '&'));
+          return safe
+            ? '<a href="' + escapeHtml(safe) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'
+            : label;
+        });
+      cites.forEach((html, index) => {
+        text = text.split('\u0000CITE' + index + '\u0000').join(html);
+      });
+      return text;
+    }
+
+    function renderMarkdownReport(source) {
+      const lines = String(source || '').replace(/\r\n?/g, '\n').split('\n');
+      const out = [];
+      let code = null;
+      let listType = '';
+      let listItems = [];
+      const flushList = () => {
+        if (!listItems.length) return;
+        out.push('<' + listType + '>' + listItems.map(item => '<li>' + item + '</li>').join('') + '</' + listType + '>');
+        listItems = [];
+        listType = '';
+      };
+      const flushCode = () => {
+        if (code === null) return;
+        out.push('<pre><code>' + escapeHtml(code.join('\n')) + '</code></pre>');
+        code = null;
+      };
+      for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        if (/^```/.test(line.trim())) {
+          flushList();
+          if (code === null) code = [];
+          else flushCode();
+          continue;
+        }
+        if (code !== null) {
+          code.push(line);
+          continue;
+        }
+        const heading = line.match(/^(#{1,4})\s+(.+)$/);
+        if (heading) {
+          flushList();
+          const level = heading[1].length + 1;
+          out.push('<h' + Math.min(level, 5) + '>' + renderInline(heading[2]) + '</h' + Math.min(level, 5) + '>');
+          continue;
+        }
+        if (/^\s*\|.*\|\s*$/.test(line) && /^\s*\|[\s:|-]+\|\s*$/.test(lines[index + 1] || '')) {
+          flushList();
+          const rows = [];
+          rows.push(line);
+          index += 2;
+          while (index < lines.length && /^\s*\|.*\|\s*$/.test(lines[index])) {
+            rows.push(lines[index]);
+            index += 1;
+          }
+          index -= 1;
+          out.push('<table><tbody>' + rows.map((row, rowIndex) => {
+            const cells = row.trim().replace(/^\||\|$/g, '').split('|').map(cell => renderInline(cell.trim()));
+            const tag = rowIndex === 0 ? 'th' : 'td';
+            return '<tr>' + cells.map(cell => '<' + tag + '>' + cell + '</' + tag + '>').join('') + '</tr>';
+          }).join('') + '</tbody></table>');
+          continue;
+        }
+        const unordered = line.match(/^\s*[-*]\s+(.+)$/);
+        const ordered = line.match(/^\s*\d+[.)]\s+(.+)$/);
+        if (unordered || ordered) {
+          const nextType = unordered ? 'ul' : 'ol';
+          if (listType && listType !== nextType) flushList();
+          listType = nextType;
+          listItems.push(renderInline((unordered || ordered)[1]));
+          continue;
+        }
+        flushList();
+        if (!line.trim()) continue;
+        if (/^>\s?/.test(line)) {
+          out.push('<blockquote>' + renderInline(line.replace(/^>\s?/, '')) + '</blockquote>');
+          continue;
+        }
+        out.push('<p>' + renderInline(line) + '</p>');
+      }
+      flushList();
+      flushCode();
+      return out.join('\n');
+    }
+
+    async function viewText() {
+      const response = await fetch(fileUrl(filePath));
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const text = await response.text();
+      const viewer = document.getElementById('viewer');
+      if (ext === 'md' || ext === 'markdown') {
+        const article = document.createElement('article');
+        article.className = 'report-content';
+        article.innerHTML = renderMarkdownReport(text);
+        viewer.replaceChildren(article);
+        document.getElementById('pageInfo').textContent = 'REPORT';
+        document.getElementById('prevBtn').style.display = 'none';
+        document.getElementById('nextBtn').style.display = 'none';
+        return;
+      }
+      const pre = document.createElement('pre');
+      pre.className = 'text-preview';
+      pre.textContent = text;
+      viewer.replaceChildren(pre);
+      document.getElementById('pageInfo').textContent = ext.toUpperCase();
+      document.getElementById('prevBtn').style.display = 'none';
+      document.getElementById('nextBtn').style.display = 'none';
+    }
+
+    // PDF 预览
+    let pdfDoc = null;
+    let currentPage = 1;
+    
+    async function viewPDF(blob) {
+      const arrayBuffer = await blob.arrayBuffer();
+      pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      renderPDFPage(1);
+    }
+    
+    async function renderPDFPage(pageNum) {
+      const page = await pdfDoc.getPage(pageNum);
+      const scale = 1.5;
+      const viewport = page.getViewport({ scale });
+      
+      const viewer = document.getElementById('viewer');
+      viewer.innerHTML = `<canvas id="pdfCanvas"></canvas>`;
+      
+      const canvas = document.getElementById('pdfCanvas');
+      const context = canvas.getContext('2d');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      
+      await page.render({ canvasContext: context, viewport }).promise;
+      
+      currentPage = pageNum;
+      document.getElementById('pageInfo').textContent = pageNum + ' / ' + pdfDoc.numPages;
+      document.getElementById('prevBtn').disabled = pageNum <= 1;
+      document.getElementById('nextBtn').disabled = pageNum >= pdfDoc.numPages;
+    }
+    
+    function prevPage() { if (currentPage > 1) renderPDFPage(currentPage - 1); }
+    function nextPage() { if (pdfDoc && currentPage < pdfDoc.numPages) renderPDFPage(currentPage + 1); }
+
+    // XLSX 预览
+    async function viewXLSX(blob) {
+      const arrayBuffer = await blob.arrayBuffer();
+      const workbook = XLSX.read(arrayBuffer, { type: 'array' });
+      
+      let html = '<div style="padding:20px;"><table style="border-collapse:collapse;width:100%;">';
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const data = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      
+      for (let i = 0; i < Math.min(data.length, 100); i++) {
+        html += '<tr>';
+        for (let j = 0; j < Math.min(data[i].length, 20); j++) {
+          const cellValue = data[i][j] !== undefined ? data[i][j] : '';
+          if (i === 0) {
+            html += '<th style="background:#f0f0f0;border:1px solid #ddd;padding:8px;">' + cellValue + '</th>';
+          } else {
+            html += '<td style="border:1px solid #ddd;padding:8px;">' + cellValue + '</td>';
+          }
+        }
+        html += '</tr>';
+      }
+      html += '</table></div>';
+      
+      document.getElementById('viewer').innerHTML = html;
+      document.getElementById('pageInfo').textContent = 'XLSX - ' + sheetName;
+      document.getElementById('prevBtn').style.display = 'none';
+      document.getElementById('nextBtn').style.display = 'none';
+    }
+
+    // DOCX 预览
+    // Audio / video: <audio controls> for sound, <video controls> for
+    // picture. Both use a blob URL so the file never leaves the user's
+    // browser tab (no upload to a third-party CDN). Auto-loop is enabled
+    // because the most common use case here is "play my playlist on repeat".
+    // Audio / video: for audio we render a Spotify-style player (large
+    // artwork, scrubbable progress bar, big play button, transport
+    // controls, volume slider). The audio element is hidden; the JS
+    // controls all delegate to its play/pause/currentTime APIs. For
+    // video we keep a simple inline <video> with controls.
+    //
+    // Standalone viewer streams from /api/download with HTTP Range requests.
+    // Embedded chat previews use the restricted file-content endpoint.
+    function viewMedia(kind, name) {
+      const viewer = document.getElementById('viewer');
+      const safeName = (name || 'media').replace(/[<>&"']/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[ch]));
+      const src = fileUrl(filePath);
+      const element = document.createElement(kind);
+      element.src = src;
+      element.controls = kind === 'video';
+      element.preload = 'metadata';
+      element.playsInline = true;
+      // Audio is hidden behind the custom music-player chrome; video must
+      // stay visible. A single shared id with display:none !important used
+      // to hide BOTH, which is why videos played audio with a black pane.
+      if (kind === 'audio') {
+        element.classList.add('media-driver-audio');
+      } else {
+        element.className = 'media-video';
+      }
+
+      if (kind === 'audio') {
+        renderMusicPlayer(viewer, element, safeName, kind);
+        attemptAutoplay(element, viewer.querySelector('.music-stage'));
+      } else {
+        const heading = document.createElement('div');
+        heading.style.cssText = 'padding:14px 20px 0;color:#c8c8c8;font-size:13px;text-align:center;';
+        heading.textContent = safeName;
+        viewer.innerHTML = '';
+        viewer.appendChild(heading);
+        viewer.appendChild(element);
+        attemptAutoplay(element, viewer);
+        // Codec support in browsers is limited (no HEVC, most AVI, WMV).
+        // When decoding fails, tell the user and offer the download.
+        element.addEventListener('error', () => {
+          viewer.innerHTML =
+            '<div style="padding:60px 40px;text-align:center;color:#ddd;font-family:sans-serif;">' +
+            '<div style="font-size:40px;margin-bottom:16px;">🎬</div>' +
+            '<h3 style="margin:0 0 10px;">此视频编码无法在浏览器中播放</h3>' +
+            '<p style="color:#999;font-size:13px;line-height:1.7;">常见原因：HEVC/H.265、AVI、WMV 等编码。<br>可转码为 H.264 MP4 后再预览，或直接下载播放：</p>' +
+            '<a href="' + src + '" download style="display:inline-block;margin-top:18px;padding:10px 20px;background:#0e639c;color:#fff;border-radius:4px;text-decoration:none;">⬇ 下载视频</a>' +
+            '</div>';
+        });
+      }
+    }
+
+    // renderMusicPlayer builds a Spotify/Apple-Music-style player around a
+    // hidden <audio> element. Layout (CSS Grid):
+    //
+    //   ┌──── art (cover or default disc) ────┐   title
+    //   │                                     │   artist — album
+    //   │                                     │   [scrub bar]
+    //   └─────────────────────────────────────┘   0:00 ━━━●━━━━ 3:45
+    //                                           [transport row]
+    //                                           [volume row]
+    //
+    // The cover also doubles as the play/pause button (toggles on click).
+    function renderMusicPlayer(viewer, audio, name, contentType) {
+      const baseName = name.replace(/\.[^.]+$/, '');
+      const stage = document.createElement('div');
+      stage.className = 'music-stage';
+
+      // ---- Art block: vinyl record peeking out from behind the cover ----
+      const art = document.createElement('div');
+      art.className = 'music-art';
+
+      const disc = document.createElement('div');
+      disc.className = 'music-disc';
+      const discLabel = document.createElement('div');
+      discLabel.className = 'music-disc-label';
+      discLabel.textContent = baseName.slice(0, 20);
+      disc.appendChild(discLabel);
+      art.appendChild(disc);
+
+      const cover = document.createElement('div');
+      cover.className = 'music-cover';
+      cover.title = '点击播放/暂停';
+      cover.innerHTML = '<div class="music-cover-glyph">♪</div>';
+      cover.addEventListener('click', () => {
+        if (audio.paused) audio.play().catch(() => {});
+        else audio.pause();
+      });
+      art.appendChild(cover);
+      stage.appendChild(art);
+
+      // ---- Track meta (right of cover) ----
+      const meta = document.createElement('div');
+      meta.className = 'music-meta';
+      const title = document.createElement('div');
+      title.className = 'music-title';
+      title.textContent = baseName;
+      const sub = document.createElement('div');
+      sub.className = 'music-sub';
+      sub.textContent = '本地文件 · ' + (contentType || 'audio');
+      meta.appendChild(title);
+      meta.appendChild(sub);
+      stage.appendChild(meta);
+
+      // ---- Scrub bar (full width below the row) ----
+      const scrub = document.createElement('div');
+      scrub.className = 'music-scrub';
+      const cur = document.createElement('span');
+      cur.className = 'music-time';
+      cur.textContent = '0:00';
+      const track = document.createElement('div');
+      track.className = 'music-track';
+      const buffered = document.createElement('div');
+      buffered.className = 'music-buffered';
+      const progress = document.createElement('div');
+      progress.className = 'music-progress';
+      const handle = document.createElement('div');
+      handle.className = 'music-handle';
+      track.appendChild(buffered);
+      track.appendChild(progress);
+      track.appendChild(handle);
+      const dur = document.createElement('span');
+      dur.className = 'music-time';
+      dur.textContent = '0:00';
+      scrub.appendChild(cur);
+      scrub.appendChild(track);
+      scrub.appendChild(dur);
+      stage.appendChild(scrub);
+
+      // ---- Transport row (play/pause + prev/next + loop + shuffle) ----
+      const transport = document.createElement('div');
+      transport.className = 'music-transport';
+      const mkBtn = (cls, title, label, onClick) => {
+        const b = document.createElement('button');
+        b.className = 'music-btn ' + cls;
+        b.title = title;
+        b.setAttribute('aria-label', title);
+        b.innerHTML = label;
+        b.addEventListener('click', onClick);
+        return b;
+      };
+      const shuffleBtn = mkBtn('music-shuffle', '随机播放', '⇆', () => {});
+      const prevBtn = mkBtn('music-prev', '上一首', '⏮', () => seekRel(-10));
+      const rewindBtn = mkBtn('music-rewind', '快退10秒', '⟲', () => seekRel(-10));
+      const playBtn = mkBtn('music-play', '播放/暂停', '▶', togglePlay);
+      const forwardBtn = mkBtn('music-forward', '快进10秒', '⟳', () => seekRel(10));
+      const nextBtn = mkBtn('music-next', '下一首', '⏭', () => seekRel(10));
+      const loopBtn = mkBtn('music-loop', '循环模式', '⟲', () => {
+        audio.loop = !audio.loop;
+        loopBtn.classList.toggle('active', audio.loop);
+      });
+      transport.appendChild(shuffleBtn);
+      transport.appendChild(prevBtn);
+      transport.appendChild(rewindBtn);
+      transport.appendChild(playBtn);
+      transport.appendChild(forwardBtn);
+      transport.appendChild(nextBtn);
+      transport.appendChild(loopBtn);
+      stage.appendChild(transport);
+
+      // ---- Volume row ----
+      const volRow = document.createElement('div');
+      volRow.className = 'music-volume';
+      const volIcon = mkBtn('music-volicon', '静音', '🔊', () => {
+        audio.muted = !audio.muted;
+        volIcon.classList.toggle('active', audio.muted);
+      });
+      const volTrack = document.createElement('div');
+      volTrack.className = 'music-voltrack';
+      const volFill = document.createElement('div');
+      volFill.className = 'music-volfill';
+      const volHandle = document.createElement('div');
+      volHandle.className = 'music-volhandle';
+      volTrack.appendChild(volFill);
+      volTrack.appendChild(volHandle);
+      volRow.appendChild(volIcon);
+      volRow.appendChild(volTrack);
+      stage.appendChild(volRow);
+
+      // Hidden audio driver (the visible controls drive this).
+      stage.appendChild(audio);
+
+      viewer.innerHTML = '';
+      viewer.appendChild(stage);
+
+      // ---- Wiring ----
+      const fmt = (sec) => {
+        if (!isFinite(sec)) return '0:00';
+        const m = Math.floor(sec / 60);
+        const s = Math.floor(sec % 60);
+        return m + ':' + (s < 10 ? '0' : '') + s;
+      };
+
+      const refresh = () => {
+        cur.textContent = fmt(audio.currentTime);
+        dur.textContent = fmt(audio.duration);
+        const pct = audio.duration ? (audio.currentTime / audio.duration) * 100 : 0;
+        progress.style.width = pct + '%';
+        handle.style.left = pct + '%';
+        if (audio.buffered.length > 0 && audio.duration) {
+          const bPct = (audio.buffered.end(audio.buffered.length - 1) / audio.duration) * 100;
+          buffered.style.width = bPct + '%';
+        } else {
+          buffered.style.width = '0%';
+        }
+      };
+      audio.addEventListener('timeupdate', refresh);
+      audio.addEventListener('loadedmetadata', refresh);
+      audio.addEventListener('durationchange', refresh);
+      audio.addEventListener('progress', refresh);
+
+      const refreshPlay = () => {
+        const playing = !audio.paused && audio.readyState >= 2;
+        playBtn.innerHTML = playing ? '⏸' : '▶';
+        playBtn.classList.toggle('playing', playing);
+        stage.classList.toggle('spinning', playing);
+      };
+      audio.addEventListener('play',  refreshPlay);
+      audio.addEventListener('pause', refreshPlay);
+      audio.addEventListener('ended', refreshPlay);
+
+      const refreshVolume = () => {
+        const v = audio.muted ? 0 : audio.volume;
+        volFill.style.width = (v * 100) + '%';
+        volHandle.style.left = (v * 100) + '%';
+      };
+      audio.addEventListener('volumechange', refreshVolume);
+      audio.volume = 0.8;
+      refreshVolume();
+
+      function togglePlay() {
+        if (audio.paused) audio.play().catch(() => {});
+        else audio.pause();
+      }
+      function seekRel(delta) {
+        audio.currentTime = Math.max(0, Math.min(audio.duration || 0, audio.currentTime + delta));
+        refresh();
+      }
+
+      // Scrub bar — click to seek, drag the handle to scrub.
+      const onTrackClick = (e) => {
+        const rect = track.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        if (audio.duration) audio.currentTime = ratio * audio.duration;
+        refresh();
+      };
+      track.addEventListener('click', onTrackClick);
+      let dragging = false;
+      handle.addEventListener('mousedown', (e) => {
+        dragging = true;
+        e.preventDefault();
+        document.body.style.userSelect = 'none';
+      });
+      document.addEventListener('mousemove', (e) => {
+        if (!dragging) return;
+        const rect = track.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        if (audio.duration) audio.currentTime = ratio * audio.duration;
+        refresh();
+      });
+      document.addEventListener('mouseup', () => {
+        if (!dragging) return;
+        dragging = false;
+        document.body.style.userSelect = '';
+      });
+
+      // Volume drag.
+      let vDragging = false;
+      const onVolClick = (e) => {
+        const rect = volTrack.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        audio.volume = ratio;
+        audio.muted = false;
+        refreshVolume();
+      };
+      volTrack.addEventListener('click', onVolClick);
+      volHandle.addEventListener('mousedown', (e) => {
+        vDragging = true;
+        e.preventDefault();
+        document.body.style.userSelect = 'none';
+      });
+      document.addEventListener('mousemove', (e) => {
+        if (!vDragging) return;
+        const rect = volTrack.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        audio.volume = ratio;
+        audio.muted = false;
+        refreshVolume();
+      });
+      document.addEventListener('mouseup', () => {
+        if (!vDragging) return;
+        vDragging = false;
+        document.body.style.userSelect = '';
+      });
+    }
+
+    // attemptAutoplay starts playback when the host asked for it
+    // (?autoplay=1 from the show_result / file-manager path). Browsers
+    // block sound-carrying autoplay without a user gesture, so on refusal
+    // we mount a full-screen "tap to play" overlay — that single click is
+    // the gesture the browser requires, and playback then starts with sound.
+    function attemptAutoplay(element, container) {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('autoplay') !== '1') return;
+      const p = element.play();
+      if (!p) return;
+      p.catch(() => {
+        const overlay = document.createElement('div');
+        overlay.className = 'autoplay-overlay';
+        overlay.innerHTML = '<div class="autoplay-btn">▶</div><div class="autoplay-hint">点击播放</div>';
+        overlay.addEventListener('click', () => {
+          element.play().catch(() => {});
+          overlay.remove();
+        });
+        container.appendChild(overlay);
+      });
+    }
+
+    async function viewDOCX(blob) {
+      const arrayBuffer = await blob.arrayBuffer();
+      const viewer = document.getElementById('viewer');
+      const stage = document.createElement('div');
+      stage.className = 'docx-preview-stage';
+      viewer.replaceChildren(stage);
+      if (!window.docx || typeof window.docx.renderAsync !== 'function') {
+        throw new Error('DOCX 渲染器不可用');
+      }
+      await window.docx.renderAsync(arrayBuffer, stage, null, {
+        className: 'docx',
+        inWrapper: false,
+      });
+      document.getElementById('pageInfo').textContent = 'DOCX';
+      document.getElementById('prevBtn').style.display = 'none';
+      document.getElementById('nextBtn').style.display = 'none';
+    }
+
+    // PPTX 预览 — Fairy 不带 Office 在线查看器。把文件路径告诉给用户，
+    // 让用户在自己机器上用 PowerPoint 打开。文件本身仍可通过
+    // /api/file-content?path=... 单独下载。
+    async function viewPPTX(_blob) {
+      const viewer = document.getElementById('viewer');
+      const safePath = (filePath || '').replace(/[<>&"']/g, ch => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&#39;' }[ch]));
+      const downloadUrl = '/api/download?path=' + encodeURIComponent(filePath);
+      viewer.innerHTML =
+        '<div style="padding:40px;font-family:Georgia,serif;color:#333;max-width:720px;">' +
+        '<h2 style="margin-top:0;">PPTX 预览不可用</h2>' +
+        '<p>Fairy viewer 不在浏览器内渲染 PPTX（无内嵌 PowerPoint 引擎）。请在本机用 PowerPoint / Keynote / LibreOffice 打开文件，或下载到本地后双击：</p>' +
+        '<pre style="background:#f5f5f5;padding:12px;border-radius:4px;overflow:auto;">' +
+        safePath +
+        '</pre>' +
+        '<p style="margin-top:24px;"><a href="' + downloadUrl + '" download style="display:inline-block;background:#0e639c;color:#fff;padding:8px 16px;border-radius:4px;text-decoration:none;">⬇ 下载文件</a></p>' +
+        '<p style="color:#666;font-size:13px;margin-top:16px;">提示：Fairy agent 跑完 PPT 任务后会自动生成 PDF 版本（在 PPT 同目录的 <code>.pdf</code> 文件），那个可以在 viewer 里直接预览。</p>' +
+        '</div>';
+      document.getElementById('pageInfo').textContent = 'PPTX';
+    }
+
+    loadFile();
+  </script>
+</body>
+</html>

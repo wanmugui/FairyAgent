@@ -1,0 +1,29 @@
+{
+  "name": "agent-loop-demo",
+  "private": true,
+  "engines": {
+    "node": ">=18.18"
+  },
+  "scripts": {
+    "agent:build": "node scripts/agent_path.mjs",
+    "dev": "node scripts/dev.mjs",
+    "setup:python": "node scripts/setup_python.mjs",
+    "gateway:mock": "node scripts/python.mjs tool_gateway/start-gateway.py --mock",
+    "gateway:status": "node scripts/python.mjs tool_gateway/status-gateway.py",
+    "gateway:stop": "node scripts/python.mjs tool_gateway/stop-gateway.py",
+    "prompt:build": "node scripts/build_system_prompts.mjs",
+    "prompt:check": "node scripts/build_system_prompts.mjs --check",
+    "service:restart": "node scripts/restart-service.mjs",
+    "tauri:dev": "node scripts/tauri.mjs dev",
+    "tauri:build": "node scripts/tauri.mjs build",
+    "test:python": "node scripts/python.mjs scripts/python_smoke.py",
+    "test:launcher": "node --test scripts/dev.test.mjs scripts/python.test.mjs",
+    "test:cross-platform": "node scripts/cross_platform_check.mjs",
+    "test:system-prompts": "node scripts/build_system_prompts.mjs --check"
+  },
+  "packageManager": "pnpm@10.15.1",
+  "dependencies": {
+    "playwright-core": "^1.63.0",
+    "ws": "^8.21.3"
+  }
+}

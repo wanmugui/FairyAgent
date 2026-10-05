@@ -1,0 +1,186 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+
+# Native build artifacts are cached locally, never committed.
+*.exe
+# Published desktop binary (build artifact, never committed)
+/Fairy
+/Fairy.app/
+agent/agent-loop
+
+# PowerShell temp files
+*.ps1.bak
+*.ps1.old
+
+# Logs
+logs/
+*.log
+web/clotho_log.txt
+
+# Run artifacts
+runs/
+web/sessions/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# API key files (contain secrets)
+DEEPSEEK_key.txt
+MINIMAX_key.txt
+MINIMAX_KEY_TXT.txt
+
+# Local debugging artefacts
+fairy_system_prompt.txt
+
+# Real API config (contains hardcoded API key)
+
+# Workspace working files
+workspace/todos/
+workspace/ask_user/
+
+
+# Gateway temp files
+*.pid
+
+# IDE
+.vscode/
+.idea/
+
+# Temp/mystery files
+0
+
+# Runtime output files
+server_err.txt
+server_out.txt
+
+# Temp test files
+test_debug.py
+test_final.py
+verify_streaming.py
+
+# Frontend node_modules
+frontend/node_modules/
+
+# Root development launcher metadata
+node_modules/
+
+# pnpm store (�ⲿ��������)
+.pnpm-store/
+
+# Workspace runtime outputs
+workspace/result/
+workspace/stage_status.jsonl
+
+# Frontend build output
+frontend/dist/
+
+# Workspace ppt (runtime)
+workspace/ppt/
+# 3d-model rendered previews (regenerate with model.py render)
+skills/3d-model/examples/preview/
+# Auto-installed tools (Node.js, pnpm).tools/
+
+
+# Auto-installed tools (Node.js, pnpm)
+.tools/
+
+# npm cache
+npm-cache/
+
+.gopath/
+.pnpm-store/
+
+# Backup files
+*.exe~
+
+# Local API secrets (gitignored)
+config/local_secrets.json
+
+
+ppt_batch/docs/
+
+# PPT 分析文档（本地仅供查看，不提交）
+
+# Superpowers 设计文档（本地设计产物，不提交）
+docs/superpowers/
+
+# Local AI model weights & design source assets
+models/
+# Local memory store
+memory/
+
+fairy_(Vocals).wav
+
+voice/samples
+
+fairy_(Vocals).mp3
+fairy_vocals_48k.wav
+fairy_mix_ref.wav
+
+# Local skill outputs (daily-news briefs, etc.)
+workspace/output/
+
+# Session runtime artefacts
+sessions/
+runs/
+workspace/reference-analysis/dsh-voice/
+
+# Tauri
+src-tauri/target/
+src-tauri/gen/
+
+# Go build cache (thousands of files in .tmp/gocache/, never commit)
+.tmp/
+
+# Workspace scratch directories (runtime artefacts, never commit)
+workspace/.bash_jobs/
+workspace/download/
+workspace/upload/
+workspace/tmp_patch_schema.py
+# Local job registry (bash_job shim state, machine-local)
+frontend/.bash_jobs/
+# Local diagnostic screenshots (debug artefacts, never commit)
+workspace/*.png
+
+# Backup binaries left by the build pipeline
+*.exe.old
+
+# Scratch
+.bash_jobs/
+workspace/shots/
+workspace/tmp-pw/
+
+# 微信收到的图片落盘处
+workspace/wechat-inbox/
+
+# 编辑器/冲突/人工备份产生的中间产物
+*.bak
+*.bak.*
+*.conflictbak
+*.conflictbak-*
+*.conflictbak.*
+*.workingbak
+*.workingbak-*
+*.workingbak.*
+*.orig
+*.rej
+
+# 模型缓存与 3D 产物（体积巨大，不应入库；workspace/triposr 单目录就 1.6GB）
+workspace/triposr/
+workspace/3d-pipeline-dev/
+workspace/3d-local-test/
+workspace/3d-threeview-test/
+workspace/backup/
+workspace/job-backup/
+
+# 带日期戳的日志（*.log 匹配不到 botpy.log.2026-10-02 这种）
+*.log.*
+
+# 一次性调试草稿，非源码
+workspace/p3-verify/

@@ -1,0 +1,17 @@
+{
+  "name": "Fairy - Agent Workbench",
+  "short_name": "Fairy",
+  "description": "Fairy 本地个人 Agent 工作台",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#1f2937",
+  "icons": [
+    {
+      "src": "/fairy.png",
+      "sizes": "1024x1024",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

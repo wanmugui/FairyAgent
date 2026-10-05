@@ -1,0 +1,5 @@
+# Local CPU STT. Python 3.10-3.12 is recommended because ctranslate2 may not
+# publish a wheel for newer interpreters on every platform.
+faster-whisper==1.2.0
+webrtcvad-wheels==2.0.14
+sherpa-onnx==1.13.8

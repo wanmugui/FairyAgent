@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fairy Reference Analysis"
+  short_description: "Extract UI, mechanics, and authorized software structure"
+  default_prompt: "Use $fairy-reference-analysis to analyze the target's UI and mechanics while respecting authorization and asset boundaries."

@@ -1,0 +1,513 @@
+/* =====================================================================
+   trace 分析卡片：FANTAZIO 仪表台
+   ---------------------------------------------------------------------
+   设计令牌直接取自 public/fantazio-ui.html 与 fantazio-ui-lab.html：
+     --display:"Arial Black",Impact      展示字：标签、序号、数值
+     --serif:Georgia                    标题：900 字重 + skewX(-7deg) 倾斜
+     --mono:"Courier New",monospace     数据：时间戳、原始数值
+     --paper #dce1d5 / --ink #07100f / --jade #00e4bd
+     --red #ff3156 / --yellow #f5d74b
+
+   招牌手法（四条，都来自 lab 原型）：
+     1. Georgia 900 + skewX(-7deg) 的巨型斜体标题
+     2. Arial Black + 大字距的 kicker 与序号徽章
+     3. clip-path 斜切标签（polygon 7px 切角）
+     4. hover 用 CMYK 通道错位偏移，绝不做缩放
+   另加羊皮纸语汇：多顶点 clip-path 撕纸毛边。
+
+   本文件在 main.jsx 中最后加载，靠"同特异性 + 更后出现"压过
+   App.css / themes.css / base-skin.css / zzz-skin.css 里的旧规则。
+   ===================================================================== */
+.trace-panel {
+  --tz-paper: #dce1d5;
+  --tz-ink: #07100f;
+  --tz-jade: #00e4bd;
+  --tz-jade2: #00bca4;
+  --tz-red: #ff3156;
+  --tz-yellow: #f5d74b;
+  --tz-dim: #6f8982;
+  --tz-card: #0b1513;
+  --tz-card2: #10211e;
+  --tz-line: rgba(220, 255, 240, .14);
+  --tz-line2: rgba(220, 255, 240, .52);
+
+  --tz-display: "Arial Black", Impact, "Segoe UI", sans-serif;
+  --tz-serif: Georgia, "Times New Roman", serif;
+  --tz-mono: "Courier New", ui-monospace, Menlo, Consolas, monospace;
+  --tz-skew: polygon(7px 0, 100% 0, calc(100% - 7px) 100%, 0 100%);
+  /* 撕纸毛边：底部多顶点锯齿 */
+  --tz-torn: polygon(0 0, 100% 0, 100% 54%, 95% 74%, 90% 52%, 85% 72%,
+    80% 55%, 75% 76%, 70% 53%, 65% 72%, 60% 55%, 55% 74%, 50% 52%,
+    45% 73%, 40% 55%, 35% 75%, 30% 53%, 25% 72%, 20% 55%, 15% 74%,
+    10% 52%, 5% 72%, 0 60%);
+}
+
+/* ============ 整块仪表台底板 ============ */
+/* 之前标题、标签用纸色却落在白底上，等于隐形；把整块压成暗面，
+   纸色/翡翠才成立，这一块也就从"白底上浮着几张黑卡"变成一台完整仪表。 */
+.trace-panel .trace-analysis,
+html[data-theme="base"] .trace-panel .trace-analysis,
+html[data-theme="dark"] .trace-panel .trace-analysis,
+html[data-theme="zzz"] .trace-panel .trace-analysis {
+  position: relative;
+  margin: 14px 0 4px;
+  padding: 18px 20px 22px;
+  border: 1px solid var(--tz-line);
+  background:
+    repeating-linear-gradient(0deg, rgba(220, 255, 240, .022) 0 1px, transparent 1px 4px),
+    radial-gradient(120% 90% at 82% -8%, rgba(0, 228, 189, .13), transparent 62%),
+    linear-gradient(180deg, #0b1513, #050807 72%);
+}
+/* 顶部翡翠发丝线 */
+.trace-panel .trace-analysis::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  background: linear-gradient(90deg, var(--tz-jade), rgba(0, 228, 189, 0) 62%);
+}
+
+/* ============ 分组标题 ============ */
+/* 几何张力靠"硬角 + 翡翠徽章 + 撕纸斜分隔线"承担，
+   文字本身不能猛剪切——标题是中文，Georgia 无中文字形，
+   回退字体被 skewX(-7deg) 会把笔画切歪。中文只给 -3°，字重走展示字。 */
+.trace-panel .ta-h3,
+html[data-theme="base"] .trace-panel .ta-h3,
+html[data-theme="dark"] .trace-panel .ta-h3,
+html[data-theme="zzz"] .trace-panel .ta-h3 {
+  position: relative;
+  display: block;
+  margin: 30px 0 18px;
+  padding: 0 0 10px;
+  font-family: var(--tz-display);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 1.5px;
+  color: var(--tz-paper);
+  text-transform: none;
+  transform: skewX(-3deg);
+  transform-origin: left bottom;
+}
+.trace-panel .ta-h3:first-of-type { margin-top: 18px; }
+/* 翡翠序号徽章：反向微斜 + 2px 描边（lab 的 .idx） */
+.trace-panel .ta-h3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: -3px;
+  width: 26px;
+  height: 9px;
+  background: var(--tz-jade);
+  transform: skewX(-8deg);
+}
+/* 撕纸底纹分隔 */
+.trace-panel .ta-h3::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4px;
+  background: var(--tz-line2);
+  clip-path: var(--tz-torn);
+  transform: skewX(7deg);
+  transform-origin: left bottom;
+}
+
+/* ============ 指标卡：暗底 + 全高翡翠竖条 ============ */
+/* 用 grid 均分，10 张卡落在一行；flex 排布会因内容宽度差异折成 9+1 */
+.trace-panel .ta-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 8px;
+  margin: 0 0 4px;
+}
+
+.trace-panel .ta-card,
+html[data-theme="base"] .trace-panel .ta-card,
+html[data-theme="dark"] .trace-panel .ta-card,
+html[data-theme="zzz"] .trace-panel .ta-card {
+  position: relative;
+  min-width: 0;
+  padding: 11px 12px 12px;
+  background: var(--tz-card);
+  border: 1px solid var(--tz-line);
+  border-radius: 0;
+  overflow: hidden;
+  transition: border-color .18s, box-shadow .18s;
+}
+/* 全高 3px 翡翠定位条（lab 的 .card::before） */
+.trace-panel .ta-card::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: var(--tz-jade);
+}
+.trace-panel .ta-card:hover {
+  border-color: var(--tz-line2);
+  box-shadow: 0 0 0 1px rgba(0, 228, 189, .3), 0 14px 34px -22px var(--tz-jade);
+}
+
+/* 数值：Arial Black，纸色 */
+.trace-panel .ta-card .v {
+  font-family: var(--tz-display);
+  font-size: 19px;
+  font-weight: 900;
+  line-height: 1.12;
+  letter-spacing: -.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--tz-paper);
+  transition: text-shadow .18s;
+}
+/* hover 走 CMYK 错位，不做缩放 */
+.trace-panel .ta-card:hover .v {
+  text-shadow:
+    1px 0 rgba(255, 49, 86, .6),
+    -1px 1px rgba(0, 228, 189, .5),
+    0 -1px rgba(245, 215, 75, .35);
+}
+/* 标签：Arial Black + 大字距 */
+.trace-panel .ta-card .k {
+  margin-top: 5px;
+  font-family: var(--tz-display);
+  font-size: 9.5px;
+  font-weight: 900;
+  line-height: 1.45;
+  letter-spacing: 1.6px;
+  color: var(--tz-dim);
+}
+
+/* ============ 图表卡 ============ */
+.trace-panel .chartcard,
+html[data-theme="base"] .trace-panel .chartcard,
+html[data-theme="dark"] .trace-panel .chartcard,
+html[data-theme="zzz"] .trace-panel .chartcard {
+  position: relative;
+  background: rgba(220, 255, 240, .035);
+  border: 1px solid var(--tz-line);
+  border-radius: 0;
+  box-shadow: none;
+  transition: border-color .18s, box-shadow .18s;
+}
+.trace-panel .chartcard:hover {
+  border-color: var(--tz-line2);
+  box-shadow: 0 16px 36px -26px var(--tz-jade);
+}
+.trace-panel .chart-title {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 13px;
+  padding-bottom: 9px;
+  border-bottom: 1px solid var(--tz-line);
+  font-family: var(--tz-display);
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 2.2px;
+  color: var(--tz-paper);
+}
+.trace-panel .chart-title::before {
+  content: '';
+  width: 14px;
+  height: 3px;
+  flex: 0 0 auto;
+  background: var(--tz-jade);
+  transform: skewX(-14deg);
+}
+.trace-panel .chart-body { color: var(--tz-text, var(--tz-paper)); }
+
+/* ============ 条形图 ============ */
+.trace-panel .bar-row { margin: 8px 0; }
+.trace-panel .bar-row .lab,
+.trace-panel .sq-lab,
+.trace-panel .hm-lab {
+  font-family: var(--tz-mono);
+  font-size: 11px;
+  color: var(--tz-paper);
+}
+.trace-panel .bar-row .num,
+.trace-panel .sq-val,
+.trace-panel .lg-row .num {
+  font-family: var(--tz-display);
+  font-size: 11px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  color: var(--tz-jade);
+}
+.trace-panel .bar,
+html[data-theme="base"] .trace-panel .bar,
+html[data-theme="dark"] .trace-panel .bar,
+html[data-theme="zzz"] .trace-panel .bar {
+  height: 14px;
+  border-radius: 0;
+  background: rgba(220, 255, 240, .07);
+  border: 1px solid var(--tz-line);
+}
+.trace-panel .bar i {
+  border-radius: 0;
+  box-shadow: 0 0 12px -3px currentColor;
+}
+.trace-panel .bar-row:hover .bar i { filter: brightness(1.25); }
+
+/* ============ 时间构成条 / 热力 / 图例 ============ */
+.trace-panel .sq-track,
+html[data-theme="base"] .trace-panel .sq-track,
+html[data-theme="dark"] .trace-panel .sq-track,
+html[data-theme="zzz"] .trace-panel .sq-track {
+  height: 14px;
+  border-radius: 0;
+  background: rgba(220, 255, 240, .07);
+  border: 1px solid var(--tz-line);
+}
+.trace-panel .sq-legend span,
+.trace-panel .lg-row .grow,
+.trace-panel .legend .lg-row {
+  font-family: var(--tz-mono);
+  font-size: 10.5px;
+  color: var(--tz-dim);
+}
+.trace-panel .hm-cell {
+  border-radius: 0;
+  box-shadow: inset 0 0 0 1px rgba(5, 8, 7, .55);
+}
+.trace-panel .hm-cell:hover { box-shadow: inset 0 0 0 1px var(--tz-paper); }
+
+/* ============ 状态标签：clip-path 斜切 ============ */
+.trace-panel .tsi-pill {
+  display: inline-block;
+  padding: 3px 13px 3px 15px;
+  border-radius: 0;
+  clip-path: var(--tz-skew);
+  font-family: var(--tz-display);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  line-height: 1.7;
+}
+.trace-panel .tsi-pill.ok { background: rgba(0, 228, 189, .16); color: var(--tz-jade); }
+.trace-panel .tsi-pill.info { background: rgba(220, 255, 240, .08); color: var(--tz-dim); }
+.trace-panel .tsi-pill.warn { background: rgba(245, 215, 75, .16); color: var(--tz-yellow); }
+.trace-panel .tsi-pill.bad { background: rgba(255, 49, 86, .18); color: var(--tz-red); }
+
+/* ============ 按钮：翡翠反色 + 悬停反相 ============ */
+.trace-panel .tsi-ai-btn,
+html[data-theme="base"] .trace-panel .tsi-ai-btn,
+html[data-theme="dark"] .trace-panel .tsi-ai-btn,
+html[data-theme="zzz"] .trace-panel .tsi-ai-btn {
+  font-family: var(--tz-display);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  border-radius: 0;
+  clip-path: var(--tz-skew);
+  padding: 6px 15px 6px 17px;
+  border: 1px solid var(--tz-jade);
+  background: transparent;
+  color: var(--tz-jade);
+  transition: background .16s, color .16s;
+}
+.trace-panel .tsi-ai-btn:hover:not(:disabled) {
+  background: var(--tz-jade);
+  color: var(--tz-ink);
+}
+.trace-panel .tsi-ai-btn:disabled { opacity: .4; border-color: var(--tz-dim); color: var(--tz-dim); }
+
+/* ============ 底部说明行 ============ */
+.trace-panel .ta-span,
+.trace-panel .ta-main-meta {
+  font-family: var(--tz-mono);
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--tz-dim);
+  padding: 9px 13px;
+  border: 0;
+  border-left: 3px solid var(--tz-jade);
+  background: var(--tz-card);
+}
+.trace-panel .ta-span b,
+.trace-panel .ta-main-meta b { color: var(--tz-jade); font-weight: 400; }
+
+/* ============ PPT 成品评分卡 ============ */
+.trace-panel .tsi-block {
+  background: var(--tz-card);
+  border: 1px solid var(--tz-line);
+  border-radius: 0;
+}
+.trace-panel .tsi-ds-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding-bottom: 9px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--tz-line);
+}
+/* 招牌：Arial Black + 大字距 + 翡翠 */
+.trace-panel .tsi-ds-name {
+  font-family: var(--tz-display);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 2.4px;
+  color: var(--tz-jade);
+}
+.trace-panel .tsi-ds-meta {
+  font-family: var(--tz-mono);
+  font-size: 10.5px;
+  color: var(--tz-dim);
+}
+.trace-panel .tsi-ds-dims { display: grid; gap: 8px; }
+.trace-panel .tsi-ds-dim {
+  display: grid;
+  grid-template-columns: 92px 1fr 46px;
+  gap: 10px;
+  align-items: center;
+}
+.trace-panel .tsi-ds-dim-name {
+  font-family: var(--tz-display);
+  font-size: 9.5px;
+  font-weight: 900;
+  letter-spacing: 1.2px;
+  color: var(--tz-dim);
+}
+.trace-panel .tsi-ds-dim-bar {
+  height: 12px;
+  border-radius: 0;
+  background: rgba(220, 255, 240, .07);
+  border: 1px solid var(--tz-line);
+  overflow: hidden;
+}
+.trace-panel .tsi-ds-dim-bar > i {
+  display: block;
+  height: 100%;
+  box-shadow: 0 0 12px -3px currentColor;
+}
+.trace-panel .tsi-ds-dim-val {
+  font-family: var(--tz-display);
+  font-size: 11.5px;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  color: var(--tz-paper);
+}
+/* 每页评分标签：保留红黄绿语义，只统一硬角与描边 */
+.trace-panel .tsi-ds-chip {
+  border-radius: 0;
+  border-width: 1px;
+  font-family: var(--tz-display);
+  transition: box-shadow .16s;
+}
+.trace-panel .tsi-ds-chip-no,
+.trace-panel .tsi-ds-chip-val {
+  font-family: var(--tz-display);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+.trace-panel .tsi-ds-chip:hover { box-shadow: 0 0 0 1px var(--tz-paper); }
+.trace-panel .tsi-ds-chip.open { box-shadow: 0 0 0 1px var(--tz-jade); }
+.trace-panel .tsi-ds-detail {
+  background: var(--tz-card2);
+  border: 1px solid var(--tz-line);
+  border-radius: 0;
+}
+.trace-panel .tsi-ds-reason,
+.trace-panel .tsi-text {
+  font-family: var(--tz-mono);
+  font-size: 11.5px;
+  line-height: 1.75;
+  color: var(--tz-paper);
+}
+
+/* ============ 减弱动效 ============ */
+@media (prefers-reduced-motion: reduce) {
+  .trace-panel .ta-card,
+  .trace-panel .chartcard,
+  .trace-panel .ta-card .v { transition: none; }
+}
+
+
+/* =====================================================================
+   白色基础皮肤覆盖层
+   ---------------------------------------------------------------------
+   本文件把整块 trace 强行压成暗色仪表台（--tz-card:#0b1513 + 翡翠配色），
+   这在 zzz 皮肤下成立，但在 base 白底皮肤下与整个应用割裂：整页近黑，
+   卡片 #0b1513，表头 #f8f9fb，同一屏里三种底色。
+
+   这里只在 base 下把令牌改回浅色，并抹掉两处硬编码的暗色值。
+   zzz / dark 皮肤不受影响。
+   ===================================================================== */
+html[data-theme="base"] .trace-panel {
+  /* FANTAZIO 把 --tz-paper 当"底板上的文字色"用：暗底时是浅纸色。
+     底板改白后它必须反过来变成深墨色，否则白字白底、标题整片隐形。 */
+  --tz-paper: #1a1f24;
+  --tz-ink: #1a1f24;
+  --tz-jade: #0f9b8e;
+  --tz-jade2: #0b7d72;
+  --tz-red: #e11d48;
+  --tz-yellow: #b45309;
+  --tz-dim: #6b7280;
+
+  /* 卡片与页面同色：白底皮肤就该是白底 */
+  --tz-card: #ffffff;
+  --tz-card2: #f6f7f9;
+
+  --tz-line: rgba(22, 25, 29, .10);
+  --tz-line2: rgba(22, 25, 29, .26);
+
+  /* 展示字回落到应用自身字体，避免 Arial Black 在浅色 UI 里过重 */
+  --tz-display: inherit;
+  --tz-serif: inherit;
+  --tz-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+}
+
+/* 底板：暗色纵向渐变 -> 纯白 */
+html[data-theme="base"] .trace-panel .trace-analysis {
+  background: #ffffff;
+  border-color: rgba(22, 25, 29, .10);
+}
+
+/* 顶部发丝线保留，但换成实色的翡翠 */
+html[data-theme="base"] .trace-panel .trace-analysis::before {
+  background: linear-gradient(90deg, var(--tz-jade), rgba(15, 155, 142, 0) 62%);
+}
+
+/* 分节标题左侧的翡翠徽章落在 left:23px、宽 26px，白底皮肤下标题文字
+   从 0 起排，徽章正好压住第一个字。给标题让出徽章的位置。 */
+html[data-theme="base"] .trace-panel .ta-h3 {
+  padding-left: 58px;
+}
+
+
+/* =====================================================================
+   白色基础皮肤覆盖层 · 第二轮
+   ---------------------------------------------------------------------
+   上一轮只换了 --tz-* 令牌，但 FANTAZIO 里还有一批直接写死的半透明
+   翡翠色 rgba(220,255,240,.035)，它们不走变量，base 下依然把卡片刷成
+   墨绿。这里用同等特异度（html[data-theme="base"] + 类）在同文件末尾
+   覆盖，靠"后出现"取胜；zzz / dark 皮肤不受影响。
+   ===================================================================== */
+html[data-theme="base"] .trace-panel .chartcard,
+html[data-theme="base"] .trace-panel .ta-card,
+html[data-theme="base"] .trace-panel .trace-overview,
+html[data-theme="base"] .trace-panel .tsi-details,
+html[data-theme="base"] .trace-panel .trace-detail,
+html[data-theme="base"] .trace-panel .trace-tl-item {
+  background: #ffffff;
+}
+
+/* 卡片描边从翡翠半透明换成中性灰，否则白底上是一圈绿边 */
+html[data-theme="base"] .trace-panel .chartcard,
+html[data-theme="base"] .trace-panel .ta-card {
+  border-color: rgba(22, 25, 29, .10);
+}
+
+/* 表头：之前被 html[data-theme="base"] .trace-panel-head 压成 #f8f9fb */
+html[data-theme="base"] .trace-panel-head {
+  background: #f7f8fa;
+  border-bottom: 1px solid rgba(22, 25, 29, .10);
+}

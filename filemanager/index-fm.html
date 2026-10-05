@@ -1,0 +1,1431 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Fairy File Manager</title>
+  <meta charset="utf-8">
+  <title>Harry Drive</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@mdi/font@7.4.47/css/materialdesignicons.min.css">
+  <!-- P3-4 语义令牌：必须早于下面的内联样式，才能压过旧硬编码色 -->
+  <link rel="stylesheet" href="/fm-assets/tokens.css">
+  <link rel="stylesheet" href="/fm-assets/fm-p3.css">
+  <link rel="stylesheet" href="/fm-assets/fm-tabs.css">
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js">
+function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
+function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+
+// 可拖动分隔条
+let isDragging = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('resize-handle')) {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    const sidebar = document.querySelector('.sidebar');
+    const newWidth = e.clientX;
+    if (newWidth > 150 && newWidth < 500) {
+      sidebar.style.width = newWidth + 'px';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  document.body.style.cursor = '';
+});
+
+let isDraggingV = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('sidebar-resize')) {
+    isDraggingV = true;
+    document.body.style.cursor = 'row-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingV) {
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    const header = document.querySelector('.header');
+    const content = document.querySelector('.content');
+    const panel = document.querySelector('.ai-panel');
+    const availHeight = main.clientHeight - header.clientHeight;
+    const newHeight = e.clientY - header.clientHeight;
+    if (newHeight > 100 && newHeight < availHeight - 100) {
+      sidebar.style.height = newHeight + 'px';
+      sidebar.style.flex = 'none';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDraggingV = false;
+  document.body.style.cursor = '';
+});
+// 文件信息 Popup
+let fileInfoPopup = null;
+
+// Preview current file
+async function previewMdFile() {
+  if (!window.currentOpenFile) {
+    alert('请先选择一个文件');
+    return;
+  }
+  var name = window.currentOpenFile.split('/').pop();
+  var ext = name.split('.').pop().toLowerCase();
+  if (ext === 'md') {
+    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+  } else {
+    openFile(window.currentOpenFile, name);
+  }
+}
+
+function showFileInfoPopup() {
+  const btn = document.getElementById("fileInfoBtn");
+  const openFilePath = window.currentOpenFile;
+  if (!btn || !openFilePath) {
+    if (fileInfoPopup) fileInfoPopup.remove();
+    fileInfoPopup = document.createElement("div");
+    fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
+    const rect = btn.getBoundingClientRect();
+    fileInfoPopup.style.position = "fixed";
+    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+    fileInfoPopup.style.left = rect.left + "px";
+    document.body.appendChild(fileInfoPopup);
+    return;
+  }
+  const file = files.find(f => f.path === openFilePath);
+  if (!file) return;
+  
+  if (fileInfoPopup) fileInfoPopup.remove();
+  
+  const ext = file.name.split(".").pop().toLowerCase();
+  fileInfoPopup = document.createElement("div");
+  fileInfoPopup.id = "fileInfoPopup";
+  fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
+  
+  const rect = btn.getBoundingClientRect();
+  fileInfoPopup.style.position = "fixed";
+  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+  fileInfoPopup.style.left = rect.left + "px";
+  fileInfoPopup.style.zIndex = "1000";
+  
+  document.body.appendChild(fileInfoPopup);
+}
+function hideFileInfoPopup() {
+  if (fileInfoPopup) {
+    fileInfoPopup.remove();
+    fileInfoPopup = null;
+  }
+}</script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
+function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+
+// 可拖动分隔条
+let isDragging = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('resize-handle')) {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    const sidebar = document.querySelector('.sidebar');
+    const newWidth = e.clientX;
+    if (newWidth > 150 && newWidth < 500) {
+      sidebar.style.width = newWidth + 'px';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  document.body.style.cursor = '';
+});
+
+let isDraggingV = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('sidebar-resize')) {
+    isDraggingV = true;
+    document.body.style.cursor = 'row-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingV) {
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    const header = document.querySelector('.header');
+    const content = document.querySelector('.content');
+    const panel = document.querySelector('.ai-panel');
+    const availHeight = main.clientHeight - header.clientHeight;
+    const newHeight = e.clientY - header.clientHeight;
+    if (newHeight > 100 && newHeight < availHeight - 100) {
+      sidebar.style.height = newHeight + 'px';
+      sidebar.style.flex = 'none';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDraggingV = false;
+  document.body.style.cursor = '';
+});
+// 文件信息 Popup
+let fileInfoPopup = null;
+
+// Preview current file
+async function previewMdFile() {
+  if (!window.currentOpenFile) {
+    alert('请先选择一个文件');
+    return;
+  }
+  var name = window.currentOpenFile.split('/').pop();
+  var ext = name.split('.').pop().toLowerCase();
+  if (ext === 'md') {
+    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+  } else {
+    openFile(window.currentOpenFile, name);
+  }
+}
+
+function showFileInfoPopup() {
+  const btn = document.getElementById("fileInfoBtn");
+  const openFilePath = window.currentOpenFile;
+  if (!btn || !openFilePath) {
+    if (fileInfoPopup) fileInfoPopup.remove();
+    fileInfoPopup = document.createElement("div");
+    fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
+    const rect = btn.getBoundingClientRect();
+    fileInfoPopup.style.position = "fixed";
+    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+    fileInfoPopup.style.left = rect.left + "px";
+    document.body.appendChild(fileInfoPopup);
+    return;
+  }
+  const file = files.find(f => f.path === openFilePath);
+  if (!file) return;
+  
+  if (fileInfoPopup) fileInfoPopup.remove();
+  
+  const ext = file.name.split(".").pop().toLowerCase();
+  fileInfoPopup = document.createElement("div");
+  fileInfoPopup.id = "fileInfoPopup";
+  fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
+  
+  const rect = btn.getBoundingClientRect();
+  fileInfoPopup.style.position = "fixed";
+  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+  fileInfoPopup.style.left = rect.left + "px";
+  fileInfoPopup.style.zIndex = "1000";
+  
+  document.body.appendChild(fileInfoPopup);
+}
+function hideFileInfoPopup() {
+  if (fileInfoPopup) {
+    fileInfoPopup.remove();
+    fileInfoPopup = null;
+  }
+}</script>
+  <script src="/vendor/pdfjs/pdf.min.js">
+function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
+function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+
+// 可拖动分隔条
+let isDragging = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('resize-handle')) {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    const sidebar = document.querySelector('.sidebar');
+    const newWidth = e.clientX;
+    if (newWidth > 150 && newWidth < 500) {
+      sidebar.style.width = newWidth + 'px';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  document.body.style.cursor = '';
+});
+
+let isDraggingV = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('sidebar-resize')) {
+    isDraggingV = true;
+    document.body.style.cursor = 'row-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingV) {
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    const header = document.querySelector('.header');
+    const content = document.querySelector('.content');
+    const panel = document.querySelector('.ai-panel');
+    const availHeight = main.clientHeight - header.clientHeight;
+    const newHeight = e.clientY - header.clientHeight;
+    if (newHeight > 100 && newHeight < availHeight - 100) {
+      sidebar.style.height = newHeight + 'px';
+      sidebar.style.flex = 'none';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDraggingV = false;
+  document.body.style.cursor = '';
+});
+// 文件信息 Popup
+let fileInfoPopup = null;
+
+// Preview current file
+async function previewMdFile() {
+  if (!window.currentOpenFile) {
+    alert('请先选择一个文件');
+    return;
+  }
+  var name = window.currentOpenFile.split('/').pop();
+  var ext = name.split('.').pop().toLowerCase();
+  if (ext === 'md') {
+    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+  } else {
+    openFile(window.currentOpenFile, name);
+  }
+}
+
+function showFileInfoPopup() {
+  const btn = document.getElementById("fileInfoBtn");
+  const openFilePath = window.currentOpenFile;
+  if (!btn || !openFilePath) {
+    if (fileInfoPopup) fileInfoPopup.remove();
+    fileInfoPopup = document.createElement("div");
+    fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
+    const rect = btn.getBoundingClientRect();
+    fileInfoPopup.style.position = "fixed";
+    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+    fileInfoPopup.style.left = rect.left + "px";
+    document.body.appendChild(fileInfoPopup);
+    return;
+  }
+  const file = files.find(f => f.path === openFilePath);
+  if (!file) return;
+  
+  if (fileInfoPopup) fileInfoPopup.remove();
+  
+  const ext = file.name.split(".").pop().toLowerCase();
+  fileInfoPopup = document.createElement("div");
+  fileInfoPopup.id = "fileInfoPopup";
+  fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
+  
+  const rect = btn.getBoundingClientRect();
+  fileInfoPopup.style.position = "fixed";
+  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+  fileInfoPopup.style.left = rect.left + "px";
+  fileInfoPopup.style.zIndex = "1000";
+  
+  document.body.appendChild(fileInfoPopup);
+}
+function hideFileInfoPopup() {
+  if (fileInfoPopup) {
+    fileInfoPopup.remove();
+    fileInfoPopup = null;
+  }
+}</script>
+  <script src="https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs/loader.js">
+function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
+function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+
+// 可拖动分隔条
+let isDragging = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('resize-handle')) {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    const sidebar = document.querySelector('.sidebar');
+    const newWidth = e.clientX;
+    if (newWidth > 150 && newWidth < 500) {
+      sidebar.style.width = newWidth + 'px';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  document.body.style.cursor = '';
+});
+
+let isDraggingV = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('sidebar-resize')) {
+    isDraggingV = true;
+    document.body.style.cursor = 'row-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingV) {
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    const header = document.querySelector('.header');
+    const content = document.querySelector('.content');
+    const panel = document.querySelector('.ai-panel');
+    const availHeight = main.clientHeight - header.clientHeight;
+    const newHeight = e.clientY - header.clientHeight;
+    if (newHeight > 100 && newHeight < availHeight - 100) {
+      sidebar.style.height = newHeight + 'px';
+      sidebar.style.flex = 'none';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDraggingV = false;
+  document.body.style.cursor = '';
+});
+// 文件信息 Popup
+let fileInfoPopup = null;
+
+// Preview current file
+async function previewMdFile() {
+  if (!window.currentOpenFile) {
+    alert('请先选择一个文件');
+    return;
+  }
+  var name = window.currentOpenFile.split('/').pop();
+  var ext = name.split('.').pop().toLowerCase();
+  if (ext === 'md') {
+    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+  } else {
+    openFile(window.currentOpenFile, name);
+  }
+}
+
+function showFileInfoPopup() {
+  const btn = document.getElementById("fileInfoBtn");
+  const openFilePath = window.currentOpenFile;
+  if (!btn || !openFilePath) {
+    if (fileInfoPopup) fileInfoPopup.remove();
+    fileInfoPopup = document.createElement("div");
+    fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
+    const rect = btn.getBoundingClientRect();
+    fileInfoPopup.style.position = "fixed";
+    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+    fileInfoPopup.style.left = rect.left + "px";
+    document.body.appendChild(fileInfoPopup);
+    return;
+  }
+  const file = files.find(f => f.path === openFilePath);
+  if (!file) return;
+  
+  if (fileInfoPopup) fileInfoPopup.remove();
+  
+  const ext = file.name.split(".").pop().toLowerCase();
+  fileInfoPopup = document.createElement("div");
+  fileInfoPopup.id = "fileInfoPopup";
+  fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
+  
+  const rect = btn.getBoundingClientRect();
+  fileInfoPopup.style.position = "fixed";
+  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+  fileInfoPopup.style.left = rect.left + "px";
+  fileInfoPopup.style.zIndex = "1000";
+  
+  document.body.appendChild(fileInfoPopup);
+}
+function hideFileInfoPopup() {
+  if (fileInfoPopup) {
+    fileInfoPopup.remove();
+    fileInfoPopup = null;
+  }
+}</script>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { height: 100%; overflow: hidden; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #fff; }
+    
+    .app { display: flex; flex-direction: column; height: 100vh; }
+    
+    /* Top bar - white */
+    .header {
+      height: 48px;
+      background: #fff;
+      color: #333;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+    }
+    .header-title { font-weight: 600; font-size: 14px; }
+    .header-title span { color: #1a73e8; }
+    .header-actions { margin-left: auto; display: flex; gap: 8px; }
+    .header-btn { 
+      padding: 6px 14px; background: #fff; border: 1px solid #ddd; border-radius: 4px; 
+      color: #333; cursor: pointer; font-size: 13px; 
+    }
+    .header-btn:hover { background: #f5f5f5; }
+    
+    /* Main area */
+    .main { position: relative; flex: 1; display: flex; overflow: hidden; }
+    
+    /* Left sidebar - white */
+    .sidebar { flex-shrink: 0; }
+    .sidebar-resize { height: 4px; background: #f0f0f0; cursor: row-resize; }
+    .sidebar-resize:hover { background: #1a73e8; }
+    .sidebar {
+      width: 260px;
+      min-width: 200px;
+      max-width: 400px;
+      background: #fff;
+      color: #333;
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #ddd;
+    }
+    .breadcrumb {
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #666;
+      border-bottom: 1px solid #eee;
+    }
+    .breadcrumb a { color: #1a73e8; text-decoration: none; cursor: pointer; }
+    .breadcrumb a:hover { text-decoration: underline; }
+    .sidebar-header {
+      padding: 10px 16px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+      border-bottom: 1px solid #eee;
+    }
+    .file-tree { flex: 1; overflow-y: auto; padding: 4px 0; }
+    .resize-handle { width: 4px; background: #f0f0f0; cursor: col-resize; }
+    .resize-handle:hover { background: #1a73e8; }
+    .file-item {
+      padding: 6px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+    .file-item:hover { background: #f5f5f5; }
+    .file-item.active { background: #e8f0fe; }
+    .file-item .icon { margin-right: 8px; font-size: 16px; }
+    .file-item.folder { color: #f57c00; }
+    .file-item.file { color: #1976d2; }
+    
+    /* Resize handle */
+    .resize-handle {
+      width: 4px;
+      background: #f0f0f0;
+      cursor: col-resize;
+    }
+    .resize-handle:hover { background: #1a73e8; }
+    
+    /* Middle - editor/preview - white */
+    .content { flex: 1; display: flex; flex-direction: column; background: #fff; overflow: hidden; }
+    .content-header {
+      height: 32px;
+      background: #fafafa;
+      display: flex;
+      align-items: center;
+      padding: 0 12px;
+      color: #666;
+      font-size: 12px;
+      border-bottom: 1px solid #eee;
+    }
+    .content-body { flex: 1; overflow: auto; background: #fff; }
+    #editor { height: 100%; }
+    
+    /* Right panel - white */
+    .ai-panel-new {
+      width: 300px;
+      min-width: 200px;
+      max-width: 400px;
+      background: #fff;
+      border-left: 1px solid #ddd;
+      display: flex;
+      flex-direction: column;
+    }
+    .ai-header {
+      padding: 10px 16px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #333;
+      border-bottom: 1px solid #eee;
+    }
+    .ai-content { flex: 1; overflow-y: auto; padding: 16px; color: #333; font-size: 13px; line-height: 1.6; }
+    .ai-content p { margin-bottom: 8px; }
+    .ai-content strong { color: #666; }
+    
+    /* Context Menu */
+    .context-menu {
+      position: fixed;
+      background: #fff;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      min-width: 160px;
+      z-index: 1000;
+      padding: 4px 0;
+    }
+    .context-menu-item {
+      padding: 10px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #333;
+    }
+    .context-menu-item:hover { background: #f5f5f5; }
+    .context-menu-item.danger { color: #d32f2f; }
+    .context-menu-item.danger:hover { background: #ffebee; }
+    .context-menu-item .icon { font-size: 16px; }
+    
+    /* Preview styles */
+    .preview-img { max-width: 100%; }
+    .preview-pdf { display: flex; flex-direction: column; height: 100%; }
+    .pdf-toolbar { padding: 10px; background: #f5f5f5; border-bottom: 1px solid #ddd; display: flex; gap: 10px; align-items: center; }
+    .pdf-toolbar button { padding: 6px 12px; background: #1a73e8; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+    .pdf-canvas { flex: 1; overflow: auto; text-align: center; padding: 20px; }
+    .preview-ppt { padding: 20px; }
+    .ppt-slide { background: #fafafa; border: 1px solid #ddd; padding: 20px; margin: 10px 0; border-radius: 8px; }
+    .ppt-slide img { max-width: 100%; }
+    .ppt-nav { display: flex; gap: 10px; padding: 10px; align-items: center; }
+    .ppt-nav button { padding: 6px 12px; background: #1a73e8; border: none; color: #fff; border-radius: 4px; cursor: pointer; }
+    .empty-state { padding: 60px; text-align: center; color: #999; }
+  </style>
+
+<style>
+.ai-panel{width:260px;height:140px;border-left:1px solid #ddd;border-top:1px solid #ddd;position:absolute;bottom:0;left:0;}
+.main{position:relative;}
+.md-edit{display:flex;height:100%;width:100%;}
+.md-pn{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+.md-pn:first-child{border-right:1px solid #ddd;}
+.md-hd{padding:6px 10px;background:#fafafa;border-bottom:1px solid #eee;font-size:11px;display:flex;justify-content:space-between;}
+.md-src{flex:1;padding:10px;border:none;resize:none;font-family:Consolas,monospace;font-size:13px;outline:none;}
+.md-pv{flex:1;padding:14px;overflow:auto;font-size:13px;}
+</style>
+</head>
+<body>
+  <div class="app">
+    <!-- Top header -->
+    <div class="header">
+      <div class="header-title"><i class="mdi mdi-google-drive"></i> <span>Harry Drive</span></div>
+      <div class="header-actions">
+        <button class="header-btn" id="previewMdBtn" onclick="previewMdFile()"><i class="mdi mdi-eye-outline"></i> 预览</button>
+        <button class="header-btn" id="fileInfoBtn" onmouseover="showFileInfoPopup()" onmouseout="hideFileInfoPopup()"><i class="mdi mdi-information-outline"></i> 文件信息</button>
+        <button class="header-btn" onclick="document.getElementById('fileInput').click()"><i class="mdi mdi-upload"></i> 上传</button>
+        <button class="header-btn" onclick="createFolder()"><i class="mdi mdi-folder-plus"></i> 新建文件夹</button>
+        <input type="file" id="fileInput" multiple style="display:none">
+      </div>
+    </div>
+    
+    <!-- Main content -->
+    <div class="main">
+      <!-- Left sidebar: file tree -->
+      <div class="sidebar">
+        <div class="sidebar-header"><span>文件浏览器</span><span style="margin-left:auto;cursor:pointer;font-size:16px;" onclick="loadFiles(currentPath)" title="刷新">⟳</span></div>
+        <div class="breadcrumb" id="breadcrumb"></div>
+        <div class="file-tree" id="fileTree"></div>
+        <div class="sidebar-footer">
+          <button type="button" class="sidebar-trash-btn" id="trashBtn">🗑 回收站</button>
+        </div>
+      </div>
+      <div class="sidebar-resize"></div>
+      <div class="resize-handle"></div>
+      <div class="resize-handle"></div>
+      
+      <!-- Middle: editor/preview -->
+      <div class="content">
+        <div class="content-header" id="contentHeader">选择一个文件</div>
+        <div class="content-body" id="contentBody">
+          <div class="empty-state">
+            <span style="font-size:48px;">📂</span>
+            <p style="margin-top:20px;">从左侧选择文件打开</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- P1-2 回收站面板（默认隐藏） -->
+      <div class="trash-panel" id="trashPanel" style="display:none;" role="dialog" aria-label="回收站">
+        <div class="trash-header">
+          <span>回收站</span>
+          <span class="trash-header-actions">
+            <button type="button" class="fm-btn" id="trashEmptyBtn">清空</button>
+            <button type="button" class="fm-btn" id="trashCloseBtn" title="关闭">✕</button>
+          </span>
+        </div>
+        <div class="trash-body" id="trashBody"></div>
+      </div>
+
+      <!-- Right panel (默认隐藏) -->
+      <div class="ai-panel" id="ai-panel" style="display:none;">
+        <div class="ai-header">
+          <i class="mdi mdi-information-outline"></i>
+          文件信息
+        </div>
+        <div class="ai-content" id="aiContent">
+          <p>点击文件查看详情</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+    
+    const API = '/api';
+    let currentPath = '';
+    let files = [];
+    let activeFile = null;
+    let monacoReady = false;
+    let monacoModel = null;
+    
+    // PDF state
+    let pdfDoc = null;
+    let pdfPageNum = 1;
+
+    // Monaco setup
+    require.config({ paths: { vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs' } });
+    require(['vs/editor/editor.main'], function() { monacoReady = true; });
+
+    document.addEventListener('DOMContentLoaded', init);
+    
+    function init() {
+      document.getElementById('fileInput').addEventListener('change', upload);
+      // Close context menu on click elsewhere
+      document.addEventListener('click', () => hideContextMenu());
+      // If the host opened us with ?file=... (e.g. agent's show_result tool),
+      // open the file as soon as the listing settles so the right pane shows
+      // the result immediately. loadFiles() is async — we kick it off first
+      // and let the auto-open run concurrently.
+      const params = new URLSearchParams(window.location.search);
+      const openOnLoad = params.get('file');
+      if (openOnLoad) {
+        // Show a banner with the path so the user understands why the pane
+        // already has content while the tree on the left is still loading.
+        try {
+          const banner = document.createElement('div');
+          banner.style.cssText = 'position:fixed;top:48px;right:8px;background:#0e639c;color:#fff;padding:6px 12px;border-radius:4px;font-size:12px;z-index:2000;box-shadow:0 2px 6px rgba(0,0,0,0.2);';
+          banner.textContent = 'show_result → ' + openOnLoad;
+          document.body.appendChild(banner);
+          setTimeout(() => banner.remove(), 4000);
+        } catch (_) {}
+        // Sync the sidebar with the opened file: navigate the tree to the
+        // file's directory so the breadcrumb + listing show where it lives.
+        const dir = openOnLoad.replace(/[\\/][^\\/]*$/, '');
+        loadFiles(dir);
+        const tryOpen = (attemptsLeft) => {
+          const name = openOnLoad.split(/[\\/]/).pop();
+          try { openFile(openOnLoad, name); } catch (e) { /* ignore */ }
+          // openFile() can read the file regardless of whether the directory
+          // listing finished, so a single call is enough; retries are kept as
+          // a safety net for older openFile implementations that wait on
+          // window.files to populate the size column.
+          if (attemptsLeft > 0) {
+            setTimeout(() => tryOpen(attemptsLeft - 1), 150);
+          }
+        };
+        tryOpen(3);
+      }
+      // Load the last browsed folder (defaults to root/drives) so a refresh
+      // keeps the sidebar where the user was. Skipped when ?file= already
+      // navigated the sidebar to the opened file's directory above.
+      if (!openOnLoad) {
+        const savedCwd = (() => { try { return sessionStorage.getItem('fm_cwd') || ''; } catch (_) { return ''; } })();
+        loadFiles(savedCwd);
+        // Re-open the file that was open before the refresh.
+        const savedOpen = (() => { try { return sessionStorage.getItem('fm_open') || ''; } catch (_) { return ''; } })();
+        if (savedOpen) {
+          setTimeout(() => {
+            try { openFile(savedOpen, savedOpen.split(/[\\/]/).pop()); } catch (e) { /* ignore */ }
+          }, 150);
+        }
+      }
+    }
+
+    async function loadFiles(path = '') {
+      currentPath = path;
+      // Remember the folder across refreshes so the sidebar returns to the
+      // same place the user was browsing.
+      try { sessionStorage.setItem('fm_cwd', path); } catch (_) {}
+      updateBreadcrumb();
+      try {
+        const res = await fetch(API + '/files?path=' + encodeURIComponent(path));
+        files = await res.json();
+        renderFileTree();
+      } catch (e) { console.error(e); }
+    }
+
+    function updateBreadcrumb() {
+      const bc = document.getElementById('breadcrumb');
+      let html = '<a onclick="loadFiles(\'\')">根目录</a>';
+      let acc = '';
+      currentPath.split('/').filter(p => p).forEach(p => {
+        acc += (acc ? '/' : '') + p;
+        html += ' / <a onclick="loadFiles(\'' + acc + '\')">' + p + '</a>';
+      });
+      bc.innerHTML = html;
+    }
+
+    function renderFileTree() {
+      const tree = document.getElementById('fileTree');
+      const sorted = [...files].sort((a, b) => {
+        if (a.isDirectory !== b.isDirectory) return b.isDirectory ? 1 : -1;
+        return a.name.localeCompare(b.name);
+      });
+      
+      tree.innerHTML = sorted.map(f => {
+        const cls = f.isDirectory ? 'folder' : 'file';
+        const icon = f.isDirectory ? 'mdi-folder' : getFileIconClass(f.name);
+        const click = f.isDirectory ? 'loadFiles(\''+f.path+'\')' : 'openFile(\''+f.path+'\',\''+f.name+'\')';
+        const active = activeFile === f.path ? 'active' : '';
+        return '<div class="file-item ' + cls + ' ' + active + '" ' +
+          'onclick="' + click + '" ' +
+          'oncontextmenu="showContextMenu(event, \'' + f.path + '\', \'' + f.name + '\', ' + f.isDirectory + ')">' +
+          '<i class="mdi ' + icon + ' icon"></i>' + f.name + '</div>';
+      }).join('');
+    }
+
+    function getFileIconClass(name) {
+      const ext = name.split('.').pop().toLowerCase();
+      const icons = { 
+        md: 'mdi-language-markdown', txt: 'mdi-file-document-outline', js: 'mdi-language-javascript', 
+        py: 'mdi-language-python', html: 'mdi-language-html5', css: 'mdi-language-css3', 
+        json: 'mdi-code-json',
+        pdf: 'mdi-file-pdf-box', docx: 'mdi-file-word', xlsx: 'mdi-file-excel',
+        pptx: 'mdi-file-powerpoint',
+        jpg: 'mdi-image', png: 'mdi-image', gif: 'mdi-image', svg: 'mdi-image-svg',
+        zip: 'mdi-folder-zip'
+      };
+      return icons[ext] || 'mdi-file';
+    }
+
+    // Context Menu
+    let contextMenuTarget = null;
+    
+    function showContextMenu(e, path, name, isDir) {
+      e.preventDefault();
+      e.stopPropagation();
+      contextMenuTarget = { path, name, isDir };
+      
+      // Remove existing menu
+      hideContextMenu();
+      
+      const menu = document.createElement('div');
+      menu.className = 'context-menu';
+      menu.id = 'contextMenu';
+      menu.style.left = e.clientX + 'px';
+      menu.style.top = e.clientY + 'px';
+      
+      let items = '';
+      if (isDir) {
+        items += '<div class="context-menu-item" onclick="openFolder(\'' + path + '\')">' +
+          '<span class="icon">📂</span> 打开进入文件夹</div>';
+      }
+      items += '<div class="context-menu-item" onclick="openFileContext(\'' + path + '\', \'' + name + '\')">' +
+        '<span class="icon">📄</span> 打开文件</div>';
+      if (!isDir) {
+        items += '<div class="context-menu-item" onclick="downloadFile(\'' + path + '\')">' +
+          '<span class="icon">⬇️</span> 下载</div>';
+      }
+      items += '<div class="context-menu-item danger" onclick="deleteFile(\'' + path + '\', ' + isDir + ')">' +
+        '<span class="icon">🗑️</span> 删除</div>';
+      
+      menu.innerHTML = items;
+      document.body.appendChild(menu);
+      
+      // Adjust position if menu goes off screen
+      const rect = menu.getBoundingClientRect();
+      if (rect.right > window.innerWidth) {
+        menu.style.left = (window.innerWidth - rect.width - 10) + 'px';
+      }
+      if (rect.bottom > window.innerHeight) {
+        menu.style.top = (window.innerHeight - rect.height - 10) + 'px';
+      }
+    }
+
+    function hideContextMenu() {
+      const menu = document.getElementById('contextMenu');
+      if (menu) menu.remove();
+    }
+
+    function openFolder(path) {
+      hideContextMenu();
+      loadFiles(path);
+    }
+
+    function openFileContext(path, name) {
+      hideContextMenu();
+      selectedItem = path;  // 设置选中项
+      openFile(path, name);
+    }
+
+    function downloadFile(path) {
+      hideContextMenu();
+      window.location.href = API + '/download?path=' + encodeURIComponent(path);
+    }
+
+    async function deleteFile(path, isDir) {
+      hideContextMenu();
+      // P1-2 起删除是「移到回收站」，可还原。沿用「删除」的措辞会让人
+      // 以为文件没了而过早放弃确认。
+      const confirmMsg = isDir
+        ? '确定要把这个文件夹及其所有内容移到回收站吗？（之后可以还原）'
+        : '确定要把这个文件移到回收站吗？（之后可以还原）';
+      if (!confirm(confirmMsg)) return;
+
+      try {
+        const res = await fetch(API + '/files?path=' + encodeURIComponent(path), { method: 'DELETE' });
+        // 原来不查响应：后端返 400/500 时界面照样刷新，看起来像删成功了。
+        if (!res.ok) {
+          let msg = '删除失败（HTTP ' + res.status + '）';
+          try { const j = await res.json(); if (j && j.error) msg = j.error; } catch (_) {}
+          alert(msg);
+          return;
+        }
+        loadFiles(currentPath);
+        if (trashPanelOpen) renderTrash();
+        // Clear preview if deleted file was active
+        if (activeFile === path) {
+          activeFile = null;
+          try { sessionStorage.removeItem('fm_open'); } catch (_) {}
+          document.getElementById('contentHeader').textContent = '选择一个文件';
+          document.getElementById('contentBody').innerHTML = '<div class="empty-state"><span style="font-size:48px;">📂</span><p style="margin-top:20px;">从左侧选择文件打开</p></div>';
+          document.getElementById('aiContent').innerHTML = '<p>点击文件查看详情</p>';
+        }
+      } catch(e) {
+        alert('删除失败: ' + e.message);
+      }
+    }
+
+    // ---- P1-2 回收站 ----
+    let trashPanelOpen = false;
+
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function openTrash() {
+      trashPanelOpen = true;
+      document.getElementById('trashPanel').style.display = 'flex';
+      await renderTrash();
+    }
+
+    function closeTrash() {
+      trashPanelOpen = false;
+      document.getElementById('trashPanel').style.display = 'none';
+    }
+
+    async function renderTrash() {
+      const body = document.getElementById('trashBody');
+      body.innerHTML = '<div class="trash-empty">加载中…</div>';
+      let items = [];
+      try {
+        const res = await fetch(API + '/trash');
+        const j = await res.json();
+        items = (j && j.items) || [];
+      } catch (e) {
+        body.innerHTML = '<div class="trash-empty">读取失败：' + esc(e.message) + '</div>';
+        return;
+      }
+      if (!items.length) {
+        body.innerHTML = '<div class="trash-empty">回收站是空的</div>';
+        return;
+      }
+      body.innerHTML = items.map((it) =>
+        '<div class="trash-item" data-id="' + esc(it.id) + '">' +
+          '<div class="trash-item-main">' +
+            '<span class="trash-item-icon">' + (it.isDirectory ? '📁' : '📄') + '</span>' +
+            '<span class="trash-item-name" title="' + esc(it.originalPath) + '">' + esc(it.name) + '</span>' +
+          '</div>' +
+          '<span class="trash-item-date">' + esc(it.deletionDate || '') + '</span>' +
+          '<span class="trash-item-actions">' +
+            '<button type="button" class="fm-btn" data-act="restore">还原</button>' +
+            '<button type="button" class="fm-btn danger" data-act="purge">彻底删除</button>' +
+          '</span>' +
+        '</div>'
+      ).join('');
+    }
+
+    async function trashAction(id, act) {
+      try {
+        const res = await fetch(API + '/trash/' + act, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: id }),
+        });
+        const j = await res.json().catch(() => null);
+        if (!res.ok) { alert((j && j.error) || ('操作失败（HTTP ' + res.status + '）')); return; }
+        await renderTrash();
+        loadFiles(currentPath);
+      } catch (e) {
+        alert('操作失败: ' + e.message);
+      }
+    }
+
+    function emptyTrash() {
+      if (!confirm('确定要清空回收站吗？这里面的文件将无法还原。')) return;
+      (async () => {
+        try {
+          const res = await fetch(API + '/trash/empty', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+          const j = await res.json().catch(() => null);
+          if (!res.ok) { alert((j && j.error) || '清空失败'); return; }
+          await renderTrash();
+        } catch (e) { alert('清空失败: ' + e.message); }
+      })();
+    }
+
+    function trashOnClick(ev) {
+      const btn = ev.target.closest('button[data-act]');
+      if (btn) {
+        const item = btn.closest('.trash-item');
+        if (item) trashAction(item.dataset.id, btn.dataset.act);
+        return;
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const btn = document.getElementById('trashBtn');
+      if (btn) btn.addEventListener('click', openTrash);
+      const close = document.getElementById('trashCloseBtn');
+      if (close) close.addEventListener('click', closeTrash);
+      const emptyBtn = document.getElementById('trashEmptyBtn');
+      if (emptyBtn) emptyBtn.addEventListener('click', emptyTrash);
+      const body = document.getElementById('trashBody');
+      if (body) body.addEventListener('click', trashOnClick);
+    });
+
+    async function openFile(path, name) {
+      window.currentOpenFile = path; // 设置全局变量供 popup 使用
+      activeFile = path; // highlight the item in the sidebar tree
+      try { sessionStorage.setItem('fm_open', path); } catch (_) {}
+      renderFileTree();
+      
+      const ext = name.split('.').pop().toLowerCase();
+      const header = document.getElementById('contentHeader');
+      const body = document.getElementById('contentBody');
+      const info = document.getElementById('aiContent');
+      
+      header.textContent = name;
+      
+      // File info panel
+      const file = files.find(f => f.path === path);
+      let previewBtn = ext === 'md' ? "<a href='/filemanager/md.html?path="+encodeURIComponent(path)+"' target='_blank' style='margin-left:8px;padding:4px 10px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:12px;'>👁 预览</a>" : '';info.innerHTML = '<p><strong>名称:</strong> ' + name + previewBtn + '</p>' +
+        '<p><strong>大小:</strong> ' + (file ? formatSize(file.size) : '-') + '</p>' +
+        '<p><strong>类型:</strong> ' + (file ? (file.isDirectory ? '文件夹' : ext.toUpperCase() + ' 文件') : '-') + '</p>' + previewBtn;
+      
+      try {
+        // Markdown - rendered preview + source editor (openMd)
+        if (ext === 'md' || ext === 'markdown') {
+          const text = await (await fetch(API+'/download?path='+encodeURIComponent(path))).text();
+          openMd(path, name, text);
+        }
+        // Text files - Monaco editor
+        else if (['txt','js','ts','html','css','json','py','java','c','cpp','go','rs','sh','yaml','yml','xml','sql'].includes(ext)) {
+          const text = await (await fetch(API+'/download?path='+encodeURIComponent(path))).text();
+          body.innerHTML = '<div id="editor"></div>';
+          if (monacoReady && window.monaco) {
+            if (monacoModel) monacoModel.dispose();
+            let lang = 'plaintext';
+            if (ext === 'js') lang = 'javascript';
+            else if (ext === 'ts') lang = 'typescript';
+            else if (ext === 'py') lang = 'python';
+            else if (ext === 'html') lang = 'html';
+            else if (ext === 'css') lang = 'css';
+            else if (ext === 'json') lang = 'json';
+            monacoModel = monaco.editor.createModel(text, lang);
+            monaco.editor.create(document.getElementById('editor'), { 
+              model: monacoModel, theme: 'vs', automaticLayout: true 
+            });
+          }
+        }
+        // PDF - browser-native viewer via iframe (Chromium/Edge/Firefox built-in).
+        // Zero third-party dependency; the server stream already supports Range.
+        else if (ext === 'pdf') {
+          body.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;background:#fff;">' +
+            '<div style="padding:6px 12px;background:#fafafa;border-bottom:1px solid #eee;display:flex;align-items:center;gap:10px;font-size:12px;color:#555;">' +
+              '<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escapeHtml(name) + '</span>' +
+              '<a href="' + API + '/download?path=' + encodeURIComponent(path) + '" target="_blank" rel="noopener" style="color:#1a73e8;text-decoration:none;white-space:nowrap;">在新标签打开 ↗</a>' +
+            '</div>' +
+            '<iframe src="' + API + '/download?path=' + encodeURIComponent(path) + '" style="flex:1;width:100%;border:none;background:#525659;"></iframe>' +
+          '</div>';
+        }
+        // Images
+        else if (['jpg','jpeg','png','gif','svg','webp','bmp','ico','avif','tif','tiff'].includes(ext)) {
+          body.innerHTML = '<div style="padding:20px;height:100%;box-sizing:border-box;display:flex;align-items:center;justify-content:center;overflow:auto;"><img src="'+API+'/download?path='+encodeURIComponent(path)+'" class="preview-img" style="max-width:100%;max-height:100%;object-fit:contain;"></div>';
+        }
+        // Audio
+        // Audio — full Spotify-style player via viewer.html (large cover,
+        // mini spinning vinyl, draggable scrub bar). Autoplay so double-click
+        // starts music immediately, like a real music app.
+        else if (['mp3','wav','m4a','aac','ogg','oga','opus','flac','weba','wma'].includes(ext)) {
+          body.innerHTML = '<iframe src="/viewer.html?file='+encodeURIComponent(path)+'&autoplay=1" style="width:100%;height:100%;border:none;background:#111;"></iframe>';
+        }
+        // Video — also via viewer.html (keeps one media code path).
+        else if (['mp4','webm','mov','m4v','mkv','avi','ogv'].includes(ext)) {
+          body.innerHTML = '<iframe src="/viewer.html?file='+encodeURIComponent(path)+'&autoplay=1" style="width:100%;height:100%;border:none;background:#000;"></iframe>';
+        }
+        // PPT
+        else if (ext === 'pptx' || ext === 'ppt') {
+          body.innerHTML = '<div class="empty-state">⏳ 加载PPT中...</div>';
+          loadPptPreview(path, body);
+        }
+        // XLSX / XLS - SheetJS read-only table
+        else if (ext === 'xlsx' || ext === 'xls') {
+          body.innerHTML = '<div class="empty-state">⏳ 加载表格中...</div>';
+          try { await renderSpreadsheet(path, name, body); }
+          catch (err) { body.innerHTML = '<div class="empty-state"><p>表格加载失败：'+escapeHtml(err.message)+'</p>' + '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>'; }
+        }
+        // DOCX - docx-preview
+        else if (ext === 'docx') {
+          body.innerHTML = '<div class="empty-state">⏳ 加载 DOCX 中...</div>';
+          try { await renderDocx(path, body); }
+          catch (err) { body.innerHTML = '<div class="empty-state"><p>DOCX 加载失败：'+escapeHtml(err.message)+'</p>' + '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>'; }
+        }
+        // Other - text-ish files go to Monaco; binary files get a download card
+        else {
+          const textExts = ['log','ini','conf','cfg','env','properties','toml','vue','svelte','tex','rst','m','h','hpp','cs','php','pl','lua','r','dart','swift','kt','scala','sql','dockerfile','lock','gitignore','gitattributes','editorconfig','csv','tsv'];
+          const likelyText = textExts.includes(ext) || (file && file.size > 0 && file.size < 512 * 1024);
+          if (likelyText) {
+            const text = await (await fetch(API+'/download?path='+encodeURIComponent(path))).text();
+            if (text.indexOf('\u0000') !== -1) {
+              showBinaryPanel(body, path, name, file ? file.size : 0);
+            } else {
+              body.innerHTML = '<div id="editor"></div>';
+              if (monacoReady && window.monaco) {
+                if (monacoModel) monacoModel.dispose();
+                monacoModel = monaco.editor.createModel(text.substring(0, 50000), 'plaintext');
+                monaco.editor.create(document.getElementById('editor'), { model: monacoModel, theme: 'vs', automaticLayout: true });
+              } else {
+                body.innerHTML = '<pre style="padding:16px;overflow:auto;white-space:pre-wrap;font-family:Consolas,monospace;font-size:12px;">'+escapeHtml(text.substring(0, 50000))+'</pre>';
+              }
+            }
+          } else {
+            showBinaryPanel(body, path, name, file ? file.size : 0);
+          }
+        }
+      } catch(e) {
+        body.innerHTML = '<div style="padding:20px;color:#d32f2f;">Error: '+e.message+'</div>';
+      }
+    }
+
+    // PDF Preview
+    async function loadPdfPreview(path, body) {
+      try {
+        const res = await fetch(API + '/download?path=' + encodeURIComponent(path));
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        
+        body.innerHTML = '<div class="preview-pdf">' +
+          '<div class="pdf-toolbar">' +
+            '<button onclick="prevPdfPage()">◀ Prev</button>' +
+            '<span id="pdfPageInfo">Page 1</span>' +
+            '<button onclick="nextPdfPage()">Next ▶</button>' +
+          '</div>' +
+          '<div class="pdf-canvas" id="pdfContainer"></div>' +
+        '</div>';
+        
+        pdfDoc = await pdfjsLib.getDocument(url).promise;
+        pdfPageNum = 1;
+        renderPdfPage();
+      } catch(e) {
+        body.innerHTML = '<div class="empty-state"><p>PDF 加载失败：'+escapeHtml(e.message)+'</p>' +
+          '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后查看</a></p></div>';
+      }
+    }
+
+    async function renderPdfPage() {
+      if (!pdfDoc) return;
+      const page = await pdfDoc.getPage(pdfPageNum);
+      const viewport = page.getViewport({ scale: 1.2 });
+      const canvas = document.createElement('canvas');
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+      const container = document.getElementById('pdfContainer');
+      container.innerHTML = '';
+      container.appendChild(canvas);
+      await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+      document.getElementById('pdfPageInfo').textContent = 'Page ' + pdfPageNum + ' of ' + pdfDoc.numPages;
+    }
+
+    function prevPdfPage() { if (pdfPageNum > 1) { pdfPageNum--; renderPdfPage(); } }
+    function nextPdfPage() { if (pdfDoc && pdfPageNum < pdfDoc.numPages) { pdfPageNum++; renderPdfPage(); } }
+
+    // PPT Preview
+    async function loadPptPreview(path, body) {
+      try {
+        const res = await fetch(API + '/ppt-preview?path=' + encodeURIComponent(path));
+        const data = await res.json();
+        if (data.success && data.slides) {
+          let slides = data.slides;
+          let idx = 0;
+          function show() {
+            const s = slides[idx];
+            let html = '<div class="preview-ppt">';
+            if (s.images && s.images.length) {
+              s.images.forEach(img => { html += '<img src="'+img+'">'; });
+            }
+            if (s.content && s.content.length) {
+              html += '<div style="margin-top:10px;">' + s.content.map(c => '<p>'+escapeHtml(c)+'</p>').join('') + '</div>';
+            }
+            html += '<div class="ppt-nav"><button onclick="prevPptSlide()">◀ Prev</button> <span>' + (idx+1) + ' / ' + slides.length + '</span> <button onclick="nextPptSlide()">Next ▶</button></div>';
+            html += '</div>';
+            body.innerHTML = html;
+          }
+          window.prevPptSlide = () => { if (idx > 0) { idx--; show(); } };
+          window.nextPptSlide = () => { if (idx < slides.length - 1) { idx++; show(); } };
+          show();
+        } else {
+          body.innerHTML = '<div class="empty-state"><p>该 PPT 暂不支持在线预览（未找到对应渲染页）</p>' + pptFallbackHtml(path) + '</div>';
+        }
+      } catch(e) {
+        body.innerHTML = '<div class="empty-state"><p>PPT 在线预览失败：'+escapeHtml(e.message)+'</p>' + pptFallbackHtml(path) + '</div>';
+      }
+    }
+
+    function pptFallbackHtml(path) {
+      return '<p style="margin-top:12px;"><a href="'+API+'/download?path='+encodeURIComponent(path)+'" style="padding:8px 14px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载后用 Office/WPS 打开</a></p>';
+    }
+
+    function formatSize(b) {
+      if (b < 1024) return b + ' B';
+      if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+      if (b < 1073741824) return (b/1048576).toFixed(1) + ' MB';
+      return (b/1073741824).toFixed(1) + ' GB';
+    }
+
+    // Lazy-load a CDN script once (docx/xlsx viewers) so startup stays light.
+    const _scriptCache = {};
+    function loadScript(src) {
+      return new Promise((resolve, reject) => {
+        if (_scriptCache[src]) return resolve();
+        const s = document.createElement('script');
+        s.src = src;
+        s.onload = () => { _scriptCache[src] = true; resolve(); };
+        s.onerror = () => reject(new Error('脚本加载失败: ' + src));
+        document.head.appendChild(s);
+      });
+    }
+
+    function showBinaryPanel(body, path, name, size) {
+      body.innerHTML = '<div style="padding:60px 20px;text-align:center;color:#666;">' +
+        '<div style="font-size:40px;margin-bottom:16px;">🗎</div>' +
+        '<p style="margin-bottom:8px;font-size:14px;">' + escapeHtml(name) + (size ? '（' + formatSize(size) + '）' : '') + '</p>' +
+        '<p style="margin-bottom:20px;font-size:13px;color:#999;">该格式暂不支持在线预览，可下载后查看</p>' +
+        '<a href="' + API + '/download?path=' + encodeURIComponent(path) + '" style="padding:8px 16px;background:#1a73e8;color:#fff;text-decoration:none;border-radius:4px;font-size:13px;">⬇️ 下载 / 在浏览器打开</a></div>';
+    }
+
+    async function renderSpreadsheet(path, name, body) {
+      await loadScript('/vendor/xlsx/xlsx.full.min.js');
+      const buf = await (await fetch(API + '/download?path=' + encodeURIComponent(path))).arrayBuffer();
+      const wb = XLSX.read(buf, { type: 'array' });
+      if (!wb.SheetNames || !wb.SheetNames.length) throw new Error('工作簿为空');
+      let current = 0;
+      function sheetHtml(idx) {
+        const ws = wb.Sheets[wb.SheetNames[idx]];
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+        let html = '<table style="border-collapse:collapse;font-size:12px;width:100%;background:#fff;">';
+        rows.forEach((r, ri) => {
+          html += '<tr>' + (Array.isArray(r) ? r : []).map(c =>
+            '<td style="border:1px solid #e3e3e3;padding:4px 8px;max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;' +
+            (ri === 0 ? 'background:#f5f7fa;font-weight:600;' : '') + '">' + escapeHtml(String(c)) + '</td>').join('') + '</tr>';
+        });
+        return html + '</table>';
+      }
+      function showSheet() {
+        const tabs = wb.SheetNames.map((s, i) =>
+          '<button class="xls-tab' + (i === current ? ' active' : '') + '" onclick="xlsGo(' + i + ')" style="padding:4px 10px;border:1px solid #ddd;border-radius:4px;background:' + (i === current ? '#1a73e8' : '#fff') + ';color:' + (i === current ? '#fff' : '#333') + ';cursor:pointer;font-size:12px;">' + escapeHtml(s) + '</button>').join('');
+        body.innerHTML = '<div style="height:100%;display:flex;flex-direction:column;">' +
+          '<div style="padding:6px 10px;background:#fafafa;border-bottom:1px solid #e0e0e0;display:flex;gap:6px;flex-wrap:wrap;align-items:center;">' + tabs +
+          '<span style="margin-left:auto;font-size:12px;color:#999;">' + escapeHtml(name) + '</span></div>' +
+          '<div style="flex:1;overflow:auto;padding:8px;" id="xlsBody">' + sheetHtml(current) + '</div></div>';
+      }
+      window.xlsGo = (i) => { current = i; showSheet(); };
+      showSheet();
+    }
+
+    async function renderDocx(path, body) {
+      await loadScript('/vendor/docx/docx-preview.min.js');
+      const buf = await (await fetch(API + '/download?path=' + encodeURIComponent(path))).arrayBuffer();
+      body.innerHTML = '<div style="min-height:100%;padding:24px 0;background:#f2f2f2;"><div id="docxWrap" style="max-width:880px;margin:0 auto;padding:36px 48px;background:#fff;box-shadow:0 1px 6px rgba(0,0,0,.12);"></div></div>';
+      await docx.renderAsync(buf, document.getElementById('docxWrap'));
+    }
+
+    async function upload(e) {
+      const total = e.target.files.length;
+      
+      // 简单进度提示
+      const progressDiv = document.createElement('div');
+      progressDiv.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;padding:20px;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,0.3);z-index:9999;';
+      progressDiv.innerHTML = '<div style="margin-bottom:10px;">上传文件中...</div><div id="progress-text" style="color:#666;">0%</div>';
+      document.body.appendChild(progressDiv);
+      
+      for (let f of e.target.files) {
+        // 模拟进度（因为 fetch 不支持 progress）
+        document.getElementById('progress-text').innerHTML = f.name + ': 上传中...';
+        try {
+          const buf = await f.arrayBuffer();
+          const res = await fetch(API + '/upload?path=' + encodeURIComponent(currentPath) + '&name=' + encodeURIComponent(f.name), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/octet-stream' },
+            body: buf
+          });
+          const text = await res.text();
+          if (res.ok) {
+            document.getElementById('progress-text').innerHTML = f.name + ' ✓ 上传完成';
+          } else {
+            document.getElementById('progress-text').innerHTML = f.name + ': 失败 - ' + res.status + ' ' + text;
+          }
+        } catch(err) {
+          console.error('Upload error:', err);
+          document.getElementById('progress-text').innerHTML = f.name + ': 失败 - ' + err.message;
+        }
+      }
+      
+      setTimeout(() => {
+        document.body.removeChild(progressDiv);
+        loadFiles(currentPath);
+      }, 500);
+    }
+
+    async function createFolder() {
+      let name = prompt('请输入文件夹名称:');
+      if (!name) return;
+      await fetch(API + '/folder', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({path: currentPath, name}) });
+      loadFiles(currentPath);
+    }
+
+    function escapeHtml(t) {
+      return t.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+  
+function openMd(p,n,t){document.getElementById('contentHeader').textContent=n;document.getElementById('ai-panel').style.display='none';document.getElementById('contentBody').innerHTML='<div class=md-edit><div class=md-pn><div class=md-hd>编辑</div><textarea class=md-src id=mdx>'+escapeHtml(t)+'</textarea></div><div class=md-pn><div class=md-hd>预览 <button onclick="savMd()">💾</button></div><div class=md-pv id=mdv></div></div></div>';window.mdp=p;document.getElementById('mdx').addEventListener('input',refMd);refMd()}
+function refMd(){let s=document.getElementById('mdx').value;let h=marked.parse(s);h=h.replace(/\$\$([^$]+)\$\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:true})}catch(e){return m}});h=h.replace(/\$([^$]+)\$/g,(m,f)=>{try{return katex.renderToString(f,{displayMode:false})}catch(e){return m}});document.getElementById('mdv').innerHTML=h}
+async function savMd(){if(!confirm('保存?'))return;let r=await fetch(API+'/file?path='+encodeURIComponent(window.mdp),{method:'PUT',body:document.getElementById('mdx').value});alert(r.ok?'已保存':'失败');}
+
+// 可拖动分隔条
+let isDragging = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('resize-handle')) {
+    isDragging = true;
+    document.body.style.cursor = 'col-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDragging) {
+    const sidebar = document.querySelector('.sidebar');
+    const newWidth = e.clientX;
+    if (newWidth > 150 && newWidth < 500) {
+      sidebar.style.width = newWidth + 'px';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDragging = false;
+  document.body.style.cursor = '';
+});
+
+let isDraggingV = false;
+document.addEventListener('mousedown', (e) => {
+  if (e.target.classList.contains('sidebar-resize')) {
+    isDraggingV = true;
+    document.body.style.cursor = 'row-resize';
+  }
+});
+document.addEventListener('mousemove', (e) => {
+  if (isDraggingV) {
+    const sidebar = document.querySelector('.sidebar');
+    const main = document.querySelector('.main');
+    const header = document.querySelector('.header');
+    const content = document.querySelector('.content');
+    const panel = document.querySelector('.ai-panel');
+    const availHeight = main.clientHeight - header.clientHeight;
+    const newHeight = e.clientY - header.clientHeight;
+    if (newHeight > 100 && newHeight < availHeight - 100) {
+      sidebar.style.height = newHeight + 'px';
+      sidebar.style.flex = 'none';
+    }
+  }
+});
+document.addEventListener('mouseup', () => {
+  isDraggingV = false;
+  document.body.style.cursor = '';
+});
+// 文件信息 Popup
+let fileInfoPopup = null;
+
+// Preview current file
+async function previewMdFile() {
+  if (!window.currentOpenFile) {
+    alert('请先选择一个文件');
+    return;
+  }
+  var name = window.currentOpenFile.split('/').pop();
+  var ext = name.split('.').pop().toLowerCase();
+  if (ext === 'md') {
+    window.open('/filemanager/md.html?path=' + encodeURIComponent(window.currentOpenFile), '_blank');
+  } else {
+    openFile(window.currentOpenFile, name);
+  }
+}
+
+function showFileInfoPopup() {
+  const btn = document.getElementById("fileInfoBtn");
+  const openFilePath = window.currentOpenFile;
+  if (!btn || !openFilePath) {
+    if (fileInfoPopup) fileInfoPopup.remove();
+    fileInfoPopup = document.createElement("div");
+    fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;padding:16px;border-radius:8px;\">请先打开一个文件查看信息</div>";
+    const rect = btn.getBoundingClientRect();
+    fileInfoPopup.style.position = "fixed";
+    fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+    fileInfoPopup.style.left = rect.left + "px";
+    document.body.appendChild(fileInfoPopup);
+    return;
+  }
+  const file = files.find(f => f.path === openFilePath);
+  if (!file) return;
+  
+  if (fileInfoPopup) fileInfoPopup.remove();
+  
+  const ext = file.name.split(".").pop().toLowerCase();
+  fileInfoPopup = document.createElement("div");
+  fileInfoPopup.id = "fileInfoPopup";
+  fileInfoPopup.innerHTML = "<div style=\"background:#fff;border:1px solid #ddd;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);padding:16px;width:240px;\"><div style=\"font-weight:bold;margin-bottom:12px;border-bottom:1px solid #eee;padding-bottom:8px;\">📄 文件信息</div><div style=\"font-size:13px;line-height:1.8;\"><div><strong>名称:</strong> " + file.name + "</div><div><strong>大小:</strong> " + formatSize(file.size) + "</div><div><strong>类型:</strong> " + (file.isDirectory ? "文件夹" : ext.toUpperCase() + " 文件") + "</div><div><strong>修改:</strong> " + new Date(file.modified).toLocaleString() + "</div></div></div>";
+  
+  const rect = btn.getBoundingClientRect();
+  fileInfoPopup.style.position = "fixed";
+  fileInfoPopup.style.top = (rect.bottom + 10) + "px";
+  fileInfoPopup.style.left = rect.left + "px";
+  fileInfoPopup.style.zIndex = "1000";
+  
+  document.body.appendChild(fileInfoPopup);
+}
+function hideFileInfoPopup() {
+  if (fileInfoPopup) {
+    fileInfoPopup.remove();
+    fileInfoPopup = null;
+  }
+}</script>
+  <script src="/fm-assets/fm-p3.js"></script>
+  <!-- P1-10 编辑锁：排在 fm-p3.js 之后（要用它的 toast）且在 inline script 之后（要覆盖 openMd/savMd） -->
+  <script src="/fm-assets/fm-lock.js"></script>
+  <!-- P1-5 前端续传上传器：必须最后加载，它要接管 fileInput 的 change 监听 -->
+  <script src="/fm-assets/fm-upload.js"></script>
+  <!-- P1-9 多标签页：必须最后加载，它要覆盖 loadFiles 记录每个标签页各自的目录 -->
+  <script src="/fm-assets/fm-tabs.js"></script>
+</body>
+</html>

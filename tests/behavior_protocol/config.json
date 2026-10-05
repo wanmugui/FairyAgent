@@ -1,0 +1,21 @@
+﻿{
+    "api":  {
+                "base_url":  "mock://localhost",
+                "api_key":  "mock",
+                "model":  "mock-model",
+                "timeout_sec":  30
+            },
+    "use_mock":  true,
+    "prompts":  {
+                    "system_path":  "config/system/parts/zh/06_delivery.md",
+                    "user_path":  "config/user.txt"
+                },
+    "system_parts_dir":  "config/system/parts/zh",
+    "skills_dir":  "skills",
+    "backend_dir":  "backend",
+    "tools_schemas":  "config/tools/schemas.json",
+    "mock_file":  "tests/behavior_protocol/mock_responses.json",
+    "workspace_dir":  "workspace",
+    "history_dir":  "tests/behavior_protocol/runs",
+    "max_steps":  30
+}

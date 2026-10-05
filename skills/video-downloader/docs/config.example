@@ -1,0 +1,103 @@
+# yt-dlp 配置文件示例
+# 将此文件复制到 ~/.config/yt-dlp/config (macOS/Linux)
+# 或 C:\Users\你的用户名\yt-dlp.conf (Windows)
+
+# ====================
+# 基础配置
+# ====================
+
+# 输出目录和文件名模板
+# 按平台、上传者、标题组织文件
+-o ~/Videos/%(extractor)s/%(uploader)s/%(upload_date)s-%(title)s.%(ext)s
+
+# 合并为 MP4 格式
+--merge-output-format mp4
+
+# ====================
+# 📝 字幕配置（推荐）
+# ====================
+
+# 自动下载中英文字幕
+--write-subs
+--sub-langs zh-Hans,en
+
+# 嵌入字幕到视频文件
+--embed-subs
+
+# 转换为 SRT 格式（通用性更好）
+# --convert-subs srt
+
+# 同时下载自动生成的字幕
+# --write-auto-subs
+
+# 只下载已有字幕，不生成自动字幕
+# --no-write-auto-subs
+
+# ====================
+# 下载设置
+# ====================
+
+# 并发片段数（提高下载速度）
+--concurrent-fragments 4
+
+# 限制下载速度（可选，取消注释以启用）
+# --limit-rate 2M
+
+# 断点续传
+# --continue
+
+# 重试次数
+--retries 10
+
+# ====================
+# 元数据
+# ====================
+
+# 嵌入章节
+--embed-chapters
+
+# 嵌入元数据
+--embed-metadata
+
+# 下载缩略图
+--write-thumbnail
+
+# 嵌入缩略图作为封面
+--embed-thumbnail
+
+# ====================
+# 高级选项
+# ====================
+
+# 使用代理（取消注释并修改为你的代理地址）
+# --proxy http://127.0.0.1:7890
+
+# 使用浏览器 cookies（用于需要登录的平台）
+# --cookies-browser chrome
+
+# 只下载已有字幕，不生成自动字幕
+# --no-write-auto-subs
+
+# ====================
+# 日志和调试
+# ====================
+
+# 忽略错误继续
+# --ignore-errors
+
+# 显示进度
+--progress
+
+# 详细输出（调试用）
+# --verbose
+
+# ====================
+# 平台特定配置
+# ====================
+
+# B站最高质量（需要 cookies）
+# --cookies-from-browser chrome
+
+# YouTube 偏好
+# --break-on-existing  # 跳过已下载
+# --mark-watched  # 标记为已观看

@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <title>Fairy · 登录</title>
+    <style>
+      :root { color-scheme: dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+        background: radial-gradient(circle at 50% 20%, #101a30 0%, #05070d 70%);
+        color: #e8ecf4;
+        font-family: system-ui, -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif;
+        padding: 24px;
+      }
+      .card {
+        width: 100%; max-width: 380px; padding: 32px 28px 26px;
+        background: rgba(14, 18, 28, .92);
+        border: 1px solid rgba(120, 160, 255, .18);
+        border-radius: 16px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, .6), inset 0 1px 0 rgba(255, 255, 255, .04);
+      }
+      h1 { margin: 0 0 6px; font-size: 21px; letter-spacing: .04em; }
+      .sub { margin: 0 0 24px; font-size: 13px; color: #8d99ad; line-height: 1.5; }
+      label { display: block; font-size: 12px; color: #9aa6bb; margin: 14px 0 6px; }
+      input[type="text"], input[type="password"] {
+        width: 100%; padding: 11px 13px; font-size: 14px; color: #e8ecf4;
+        background: #0a0e16; border: 1px solid #26303f; border-radius: 9px; outline: none;
+      }
+      input:focus { border-color: #4a7dff; box-shadow: 0 0 0 3px rgba(74, 125, 255, .16); }
+      .remember { display: flex; align-items: center; gap: 8px; margin-top: 16px; font-size: 13px; color: #9aa6bb; }
+      .remember input { accent-color: #4a7dff; }
+      button {
+        width: 100%; margin-top: 22px; padding: 12px; font-size: 15px; font-weight: 600;
+        color: #04101f; background: linear-gradient(180deg, #8fb6ff, #4a7dff);
+        border: none; border-radius: 9px; cursor: pointer;
+      }
+      button:disabled { opacity: .55; cursor: default; }
+      .error { margin-top: 14px; font-size: 13px; color: #ff8a8a; min-height: 18px; }
+
+      .switch {
+        display: flex; gap: 4px; margin: 0 0 4px; padding: 4px;
+        background: #0a0e16; border: 1px solid #26303f; border-radius: 10px;
+      }
+      .switch button {
+        flex: 1; margin: 0; padding: 8px; font-size: 13px; font-weight: 600;
+        color: #9aa6bb; background: transparent; border-radius: 7px; cursor: pointer;
+      }
+      .switch button[aria-selected="true"] {
+        color: #04101f; background: linear-gradient(180deg, #8fb6ff, #4a7dff);
+      }
+      .hint { margin: 16px 0 0; font-size: 12px; color: #7e8a9e; line-height: 1.5; }
+      .hint button {
+        width: auto; margin: 0; padding: 0; font-size: 12px; font-weight: 600;
+        color: #8fb6ff; background: none; text-decoration: underline; cursor: pointer;
+      }
+      [hidden] { display: none !important; }
+    </style>
+  </head>
+  <body>
+    <form class="card" id="form" autocomplete="on">
+      <h1>Fairy</h1>
+      <p class="sub">
+        这台设备上运行的 Fairy 可以执行命令、操作桌面并读写文件，因此需要先登录。<br />
+        勾选「记住此设备」后，来自同一 IP 的访问在有效期内不再要求登录。
+      </p>
+      <div class="switch" role="tablist">
+        <button type="button" id="tab-login" role="tab" aria-selected="true">登录</button>
+        <button type="button" id="tab-register" role="tab" aria-selected="false">用邀请码注册</button>
+      </div>
+      <label for="username">用户名</label>
+      <input id="username" name="username" type="text" autocomplete="username" required />
+      <label for="password">密码</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required />
+      <div id="invite-wrap" hidden>
+        <label for="invite">邀请码</label>
+        <input id="invite" name="invite" type="text" placeholder="XXXX-XXXX" autocomplete="off" />
+        <p class="hint">邀请码由家庭组管理员生成，只显示一次。注册成功后会自动登录。</p>
+      </div>
+      <label class="remember">
+        <input id="remember" type="checkbox" checked />
+        记住此设备（按 IP 记录）
+      </label>
+      <button type="submit" id="submit">登录</button>
+      <div class="error" id="error" role="alert"></div>
+    </form>
+    <script>
+      const form = document.getElementById("form");
+      const errorBox = document.getElementById("error");
+      const submit = document.getElementById("submit");
+      const usernameEl = document.getElementById("username");
+      const passwordEl = document.getElementById("password");
+      const inviteWrap = document.getElementById("invite-wrap");
+      const inviteEl = document.getElementById("invite");
+      const rememberEl = document.getElementById("remember");
+      const tabLogin = document.getElementById("tab-login");
+      const tabRegister = document.getElementById("tab-register");
+
+      let mode = "login";
+
+      // The target after a successful login: only same-origin paths are honoured,
+      // so a crafted ?next=https://evil.example cannot turn this into an open
+      // redirect that forwards a freshly authenticated user somewhere else.
+      function safeNext() {
+        const next = new URLSearchParams(location.search).get("next") || "/";
+        if (!next.startsWith("/") || next.startsWith("//")) return "/";
+        return next;
+      }
+
+      function setMode(next) {
+        mode = next;
+        const registering = mode === "register";
+        tabLogin.setAttribute("aria-selected", String(!registering));
+        tabRegister.setAttribute("aria-selected", String(registering));
+        inviteWrap.hidden = !registering;
+        inviteEl.required = registering;
+        submit.textContent = registering ? "注册并登录" : "登录";
+        // new-password semantics only make sense while creating an account.
+        passwordEl.setAttribute("autocomplete", registering ? "new-password" : "current-password");
+        errorBox.textContent = "";
+      }
+
+      tabLogin.addEventListener("click", () => setMode("login"));
+      tabRegister.addEventListener("click", () => setMode("register"));
+
+      // Registering only creates the account; the session cookie still has to be
+      // obtained from /auth/login, otherwise the user lands on an unauthenticated app.
+      async function postJson(path, body) {
+        const response = await fetch(path, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          const error = new Error(payload.error || `请求失败（${response.status}）`);
+          error.code = payload.code;
+          error.fromServer = true;
+          throw error;
+        }
+        return payload;
+      }
+
+      function registerErrorText(error) {
+        switch (error.code) {
+          case "invite_required": return "需要邀请码才能注册";
+          case "bad_invite": return "邀请码无效或已过期";
+          case "conflict": return "用户名已被占用";
+          case "bad_username":
+          case "weak_password": return error.message;
+          default: return error.message || "注册失败";
+        }
+      }
+
+      async function register() {
+        const username = usernameEl.value;
+        const password = passwordEl.value;
+        try {
+          await postJson("/auth/register", {
+            username,
+            password,
+            invite: inviteEl.value.trim(),
+          });
+        } catch (error) {
+          errorBox.textContent = registerErrorText(error);
+          return;
+        }
+        try {
+          await postJson("/auth/login", { username, password, remember: rememberEl.checked });
+        } catch {
+          errorBox.textContent = "注册成功，但自动登录失败，请用刚注册的账号登录";
+          return;
+        }
+        location.replace(safeNext());
+      }
+
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        errorBox.textContent = "";
+        submit.disabled = true;
+        try {
+          if (mode === "register") {
+            await register();
+            return;
+          }
+          await postJson("/auth/login", {
+            username: usernameEl.value,
+            password: passwordEl.value,
+            remember: rememberEl.checked,
+          });
+          location.replace(safeNext());
+        } catch (error) {
+          // A thrown fetch error means the request never reached the server.
+          errorBox.textContent = error.fromServer
+            ? (error.code ? registerErrorText(error) : error.message || "登录失败")
+            : `无法连接服务：${error.message}`;
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>

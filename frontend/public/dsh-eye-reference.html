@@ -1,0 +1,814 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DSH Fairy Eye Animation Reference</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --demo-bg: #03060c;
+      --demo-panel: rgba(8, 14, 24, .88);
+      --demo-line: rgba(158, 208, 255, .18);
+      --demo-text: #dcecff;
+      --demo-muted: #7f94ac;
+      --demo-accent: #8ee8ff;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% 42%, rgba(24, 83, 168, .20), transparent 34%),
+        radial-gradient(circle at 50% 40%, rgba(4, 22, 54, .72), transparent 62%),
+        var(--demo-bg);
+      color: var(--demo-text);
+      font-family: "Segoe UI", "Microsoft YaHei", sans-serif;
+      overflow-x: hidden;
+    }
+
+    .demo-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      align-items: center;
+      gap: 18px;
+      padding: 28px 20px 24px;
+    }
+
+    .demo-head { text-align: center; }
+    .demo-head h1 { margin: 0; font-size: 18px; letter-spacing: .16em; font-weight: 650; }
+    .demo-head p { margin: 7px 0 0; color: var(--demo-muted); font-size: 12px; letter-spacing: .05em; }
+
+    .demo-stage-wrap {
+      display: grid;
+      place-items: center;
+      min-height: 560px;
+    }
+
+    .dsh-fairy-stage {
+      position: relative;
+      width: min(78vmin, 620px);
+      height: min(78vmin, 620px);
+      display: grid;
+      place-items: center;
+      filter: drop-shadow(0 0 34px rgba(90, 190, 255, .12));
+    }
+
+    /* The demo owns the stage size, so the DSH root simply fills it. */
+    .dsh-fairy-stage [data-dsh-fairy-mascot-root="true"] {
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    .controls {
+      width: min(100%, 720px);
+      margin: 0 auto;
+      padding: 14px;
+      border: 1px solid var(--demo-line);
+      border-radius: 14px;
+      background: var(--demo-panel);
+      backdrop-filter: blur(14px);
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 9px;
+    }
+
+    .controls button {
+      appearance: none;
+      border: 1px solid rgba(160, 214, 255, .24);
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: rgba(37, 76, 128, .22);
+      color: var(--demo-text);
+      font: inherit;
+      font-size: 12px;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+
+    .controls button:hover { background: rgba(61, 126, 206, .34); border-color: rgba(160, 224, 255, .5); }
+    .controls button:active { transform: translateY(1px); }
+    .controls button[data-active="true"] {
+      background: rgba(61, 158, 214, .38);
+      border-color: var(--demo-accent);
+      box-shadow: 0 0 18px rgba(104, 217, 255, .16);
+    }
+
+    .controls .divider {
+      width: 1px;
+      height: 22px;
+      margin: 0 3px;
+      background: var(--demo-line);
+    }
+
+    .status {
+      min-width: 110px;
+      text-align: center;
+      color: var(--demo-muted);
+      font-size: 11px;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+    }
+
+    @media (max-width: 680px) {
+      .demo-shell { padding: 18px 12px; }
+      .demo-stage-wrap { min-height: 360px; }
+      .dsh-fairy-stage { width: min(92vmin, 460px); height: min(92vmin, 460px); }
+      .controls { gap: 7px; padding: 11px; }
+      .controls button { padding: 7px 11px; font-size: 11px; }
+    }
+
+
+/* The host owns fixed positioning; this child fills the centered stage without intercepting input. */
+[data-dsh-fairy-mascot-root="true"] {
+	position: relative;
+	width: min(76%, 36vh, 450px);
+	height: min(76%, 36vh);
+	aspect-ratio: 1;
+	z-index: 99999;
+	pointer-events: none;
+	user-select: none;
+	/* Keep the root as a non-composited overflow host. Safari clips transformed
+	 * descendants to an ancestor's layout box when that ancestor owns opacity,
+	 * isolation, or containment. Opacity is applied per visual SVG below. */
+	overflow: visible;
+}
+[data-dsh-fairy-mascot-root="true"], [data-dsh-fairy-mascot-root="true"] * { box-sizing: border-box; }
+html[data-dsh-fairy-visual][data-dsh-fairy-theme="light"] [data-dsh-fairy-mascot-root="true"] .dsh-fairy-halo path,
+html[data-dsh-fairy-visual][data-dsh-fairy-theme="light"] [data-dsh-fairy-mascot-root="true"] .dsh-fairy-lash-pulse {
+	stroke: #172531;
+}
+[data-dsh-fairy-mascot-root="true"] { --dsh-fairy-outer-halo-color: #c9f8ff; }
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-halo { color: #c9efff; }
+html[data-dsh-fairy-visual][data-dsh-fairy-theme="light"] [data-dsh-fairy-mascot-root="true"] { --dsh-fairy-outer-halo-color: #172531; }
+html[data-dsh-fairy-visual][data-dsh-fairy-theme="light"] [data-dsh-fairy-mascot-root="true"] .dsh-fairy-halo { color: #172531; }
+/* Low-power mode removes only the expensive decorative raster work. */
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-outer-disc,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-sclera,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-highlight-glow {
+	filter: none;
+}
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-outer-halo,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-sclera-halo,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-sclera-contact,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-highlight-halo {
+	display: none;
+}
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-halo,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-lash-pulse {
+	display: none;
+}
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-corners,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-lash-pulse-wave,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-sclera,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-layer-three,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-layer-two,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-layer-one,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-thinking-clip-shape,
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-comforting-clip-shape {
+	will-change: auto;
+}
+/* The source image remains legible while a regular glitch is active. */
+[data-dsh-fairy-mascot-root="true"][data-transition-glitch] .dsh-fairy-outer-disc,
+[data-dsh-fairy-mascot-root="true"][data-transition-glitch] .dsh-fairy-sclera,
+[data-dsh-fairy-mascot-root="true"][data-transition-glitch] .dsh-fairy-highlight-glow,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch] .dsh-fairy-outer-disc,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch] .dsh-fairy-sclera,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch] .dsh-fairy-highlight-glow {
+	filter: none;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-float {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+[data-dsh-fairy-mascot-root="true"] svg {
+	display: block;
+	width: 100%;
+	height: 100%;
+	overflow: visible;
+}
+/* The expanding pulse has its own three-times viewport.  Its largest frame now
+ * stays inside a real SVG viewport instead of relying on root-SVG overflow,
+ * whose first-layout clipping differs across browser raster paths. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-pulse-layer {
+	position: absolute;
+	left: -100%;
+	top: -100%;
+	width: 300%;
+	height: 300%;
+	z-index: 0;
+	opacity: .92;
+	display: block;
+	visibility: visible;
+	pointer-events: none;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-halo-layer {
+	position: absolute;
+	left: -112.5%;
+	top: -43.75%;
+	width: 325%;
+	height: 200%;
+	z-index: 0;
+	pointer-events: none;
+	opacity: .92;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-main {
+	position: relative;
+	z-index: 1;
+	/* The main eye is the opaque boundary; halo/pulse layers stay behind it. */
+	opacity: 1;
+}
+/* The two glitch modes are mutually exclusive and selected by data-glitch. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal {
+	transform-origin: 80px 80px;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch],
+[data-dsh-fairy-mascot-root="true"][data-transition-glitch] .dsh-fairy-signal {
+	/* Two full-surface chromatic drop shadows were the most expensive transient
+	 * part of a fault. The retained level shift plus displacement preserves the
+	 * glitch expression without rasterizing the eye two additional times. */
+	will-change: transform, filter;
+	filter:
+		brightness(var(--dsh-g-bright, 1.12))
+		contrast(var(--dsh-g-contrast, 1.18));
+	transform: translateX(var(--dsh-g-x, 0)) skewX(var(--dsh-g-skew, 0deg));
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-image {
+	opacity: 1;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-blocks {
+	opacity: 0;
+	display: none;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="threads"] > .dsh-fairy-image,
+[data-dsh-fairy-mascot-root="true"][data-transition-glitch] .dsh-fairy-signal > .dsh-fairy-image {
+	filter: url(#dsh-fairy-interference);
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="blocks"] .dsh-fairy-glitch-blocks {
+	opacity: 1;
+	display: block;
+}
+/* Block clones contain their own lash animation; freeze all copies on one frame. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="blocks"] .dsh-fairy-corners {
+	animation: none !important;
+	transform: rotate(var(--dsh-lash-angle, 0deg));
+}
+/* The five <use> slices inherit the eye's continuous animations. Pausing their
+ * copies at the current frame keeps the same fractured image while avoiding five
+ * extra pulse timelines and compositor layers for each short block fault. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="blocks"] .dsh-fairy-glitch-blocks .dsh-fairy-sclera,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="blocks"] .dsh-fairy-glitch-blocks .dsh-fairy-layer-three,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="blocks"] .dsh-fairy-glitch-blocks .dsh-fairy-layer-two,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal[data-glitch="blocks"] .dsh-fairy-glitch-blocks .dsh-fairy-layer-one {
+	animation-play-state: paused !important;
+	will-change: auto;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-1 { transform: translateX(var(--dsh-g-s1-x, 0)); }
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-2 { transform: translateX(var(--dsh-g-s2-x, 0)); }
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-3 { transform: translateX(var(--dsh-g-s3-x, 0)); }
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-4 { transform: translateX(var(--dsh-g-s4-x, 0)); }
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-5 { transform: translateX(var(--dsh-g-s5-x, 0)); }
+/* Constant lash rotation plus staggered, continuous inside-to-outside eye breathing. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-corners {
+	animation: dsh-fairy-lashes calc(15s / var(--dsh-fairy-steady-rate, 1)) linear infinite;
+	animation-delay: var(--dsh-lash-delay, 0s);
+	transform-origin: 80px 80px;
+	will-change: transform;
+}
+/* Five nested strokes share one transform/opacity timeline. Their individual
+ * stroke widths and opacities still form the same soft pulse without keeping
+ * five identical SVG animation timelines alive. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-lash-pulse-wave {
+	animation: dsh-fairy-lash-pulse var(--dsh-fairy-pulse-cycle, 4s) cubic-bezier(.42, 0, .22, 1) infinite;
+	display: block;
+	visibility: visible;
+	opacity: 1;
+	transform-box: view-box;
+	transform-origin: 80px 80px;
+	will-change: opacity, transform;
+}
+[data-dsh-fairy-mascot-root="true"][data-dsh-fairy-animation-rate=".7"] .dsh-fairy-lash-pulse-wave { animation-name: dsh-fairy-lash-pulse-slow; }
+[data-dsh-fairy-mascot-root="true"][data-dsh-fairy-animation-rate="1.5"] .dsh-fairy-lash-pulse-wave { animation-name: dsh-fairy-lash-pulse-fast; }
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-eye {
+	transform: scale(.90);
+	transform-origin: 80px 80px;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-eye-flicker {
+	opacity: 0;
+	animation: none;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-image[data-flicker="true"] ~ .dsh-fairy-eye-flicker,
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-image[data-flicker="true"] .dsh-fairy-eye-flicker {
+	animation: dsh-fairy-eye-flicker-overlay var(--dsh-fairy-flicker-duration, 210ms) cubic-bezier(.32, 0, .68, 1) both;
+	will-change: opacity;
+}
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-eye {
+	animation: none !important;
+	filter: none !important;
+}
+[data-dsh-fairy-mascot-root="true"][data-low-power] .dsh-fairy-eye-flicker {
+	display: none !important;
+}
+[data-dsh-fairy-mascot-root="true"][data-state="thinking"] .dsh-fairy-eye {
+	clip-path: url(#dsh-fairy-thinking-eye-clip);
+}
+[data-dsh-fairy-mascot-root="true"][data-state="comforting"] .dsh-fairy-eye {
+	clip-path: url(#dsh-fairy-comforting-eye-clip);
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-thinking-clip-shape {
+	animation: dsh-fairy-thinking-clip calc(.72s / var(--dsh-fairy-steady-rate, 1)) cubic-bezier(.72, 0, .28, 1) 0s infinite alternate;
+	animation-play-state: paused;
+	transform-box: view-box;
+	transform-origin: 80px 60px;
+	will-change: auto;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-comforting-clip-shape {
+	animation: dsh-fairy-comforting-clip calc(.72s / var(--dsh-fairy-steady-rate, 1)) cubic-bezier(.72, 0, .28, 1) 0s infinite alternate;
+	animation-play-state: paused;
+	transform-box: view-box;
+	transform-origin: 80px 60px;
+	will-change: auto;
+}
+/* The runtime disables these fallback timelines and evaluates the active eyelid
+ * path from MascotMotionClock, keeping thinking/comfort on the same phase as the eye. */
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-sclera {
+	animation: dsh-fairy-pulse-outer calc(.72s / var(--dsh-fairy-steady-rate, 1)) cubic-bezier(.72, 0, .28, 1) 0s infinite alternate;
+	transform-box: view-box;
+	transform-origin: 80px 80px;
+	will-change: transform;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-layer-three {
+	animation: dsh-fairy-pulse-three calc(.72s / var(--dsh-fairy-steady-rate, 1)) cubic-bezier(.72, 0, .28, 1) calc(-.045s / var(--dsh-fairy-steady-rate, 1)) infinite alternate;
+	transform-origin: 80px 80px;
+	will-change: transform;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-layer-two {
+	animation: dsh-fairy-pulse-two calc(.72s / var(--dsh-fairy-steady-rate, 1)) cubic-bezier(.72, 0, .28, 1) calc(-.09s / var(--dsh-fairy-steady-rate, 1)) infinite alternate;
+	transform-origin: 80px 80px;
+	will-change: transform;
+}
+[data-dsh-fairy-mascot-root="true"] .dsh-fairy-layer-one {
+	animation: dsh-fairy-pulse-inner calc(.72s / var(--dsh-fairy-steady-rate, 1)) cubic-bezier(.72, 0, .28, 1) calc(-.18s / var(--dsh-fairy-steady-rate, 1)) infinite alternate;
+	transform-origin: 80px 80px;
+	will-change: transform;
+}
+/* Visual lifecycle is owned by the HDD host contract. Pausing the whole SVG
+ * freezes every eye layer on its exact frame; resume code realigns the active
+ * eyelid clip to the retained sclera phase before scheduling faults again. */
+[data-dsh-fairy-mascot-root="true"][data-visual-suspended],
+[data-dsh-fairy-mascot-root="true"][data-visual-suspended] * {
+	animation-play-state: paused !important;
+	will-change: auto !important;
+}
+/* Scanline texture stays static; moving this full-size rect continuously causes
+ * a needless SVG repaint without changing the state expression. */
+/* Correct Fairy arc: the center of the upper lid pushes downward, not upward. */
+@keyframes dsh-fairy-thinking-clip {
+	from { transform: translateY(14.5px) scaleY(.55); }
+	to { transform: translateY(15.5px); }
+}
+@keyframes dsh-fairy-comforting-clip {
+	from { transform: translateY(-4px); }
+	to { transform: translateY(4px); }
+}
+@keyframes dsh-fairy-lash-pulse {
+	0% { opacity: 0; transform: scale(.98); }
+	/* Transform stays on one continuous 0%-36% path; only opacity steps down. */
+	5% { opacity: .72; }
+	12% { opacity: .52; }
+	20% { opacity: .19; }
+	27% { opacity: 0; }
+	36%, 100% { opacity: 0; transform: scale(2.78); }
+}
+@keyframes dsh-fairy-lash-pulse-slow {
+	0% { opacity: 0; transform: scale(.98); }
+	3.9% { opacity: .72; }
+	9.4% { opacity: .52; }
+	15.7% { opacity: .19; }
+	21.2% { opacity: 0; }
+	28.3%, 100% { opacity: 0; transform: scale(2.78); }
+}
+@keyframes dsh-fairy-lash-pulse-fast {
+	0% { opacity: 0; transform: scale(.98); }
+	6.4% { opacity: .72; }
+	15.3% { opacity: .52; }
+	25.4% { opacity: .19; }
+	34.3% { opacity: 0; }
+	45.8%, 100% { opacity: 0; transform: scale(2.78); }
+}
+@keyframes dsh-fairy-lashes { to { transform: rotate(360deg); } }
+@keyframes dsh-fairy-pulse-outer {
+	/* Keep the fully expanded sclera just inside the lid edge so the ring
+	 * never becomes visibly thinner than the calibrated resting thickness. */
+	from { transform: scale(.985); }
+	to { transform: scale(.91); }
+}
+@keyframes dsh-fairy-pulse-three {
+	from { transform: scale(1); }
+	to { transform: scale(.90); }
+}
+@keyframes dsh-fairy-pulse-two {
+	from { transform: scale(1); }
+	to { transform: scale(.87); }
+}
+@keyframes dsh-fairy-pulse-inner {
+	from { transform: scale(1); }
+	to { transform: scale(.85); }
+}
+@keyframes dsh-fairy-eye-flicker-overlay {
+	0%, 100% { opacity: 0; }
+	22% { opacity: var(--dsh-fairy-flicker-opacity-1, .04); }
+	48% { opacity: var(--dsh-fairy-flicker-opacity-mid, .012); }
+	72% { opacity: var(--dsh-fairy-flicker-opacity-2, .03); }
+}
+@media (max-width: 520px) {
+	[data-dsh-fairy-mascot-root="true"] { width: min(76%, 31vh, 324px); height: min(76%, 31vh); }
+}
+@media (prefers-reduced-motion: reduce) {
+	[data-dsh-fairy-mascot-root="true"] *, [data-dsh-fairy-mascot-root="true"] *::before, [data-dsh-fairy-mascot-root="true"] *::after {
+		animation: none !important;
+	}
+		[data-dsh-fairy-mascot-root="true"] .dsh-fairy-signal {
+			opacity: 1 !important;
+			filter: none !important;
+		transform: none !important;
+	}
+	[data-dsh-fairy-mascot-root="true"] .dsh-fairy-image { opacity: 1 !important; }
+	[data-dsh-fairy-mascot-root="true"] .dsh-fairy-glitch-blocks { opacity: 0 !important; }
+}
+
+  </style>
+</head>
+<body>
+  <main class="demo-shell">
+    <header class="demo-head">
+      <h1>DSH FAIRY EYE / ANIMATION REFERENCE</h1>
+      <p>mascot-eye-svg.js + mascot-effects-svg.js + mascot-runtime.js + mascot-style.js</p>
+    </header>
+
+    <section class="demo-stage-wrap">
+      <div class="dsh-fairy-stage" id="stage" data-fairy-visual-active="true" data-fairy-state="normal">
+        <div id="dsh-fairy-root" data-dsh-fairy-mascot-root="true" data-state="normal">
+          <div class="dsh-fairy-float">
+
+<svg class="dsh-fairy-halo dsh-fairy-halo-layer" viewBox="-180 -70 520 320" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" role="presentation">
+	<defs>
+		<radialGradient id="dsh-fairy-halo-layer-fade" gradientUnits="userSpaceOnUse" color-interpolation="linearRGB" cx="80" cy="80" r="124">
+			<stop offset="0" stop-color="black"/>
+			<stop offset=".44" stop-color="black"/>
+			<stop offset=".45" stop-color="white" stop-opacity=".08"/>
+			<stop offset=".46" stop-color="white" stop-opacity=".30"/>
+			<stop offset=".47" stop-color="white" stop-opacity=".65"/>
+			<stop offset=".48" stop-color="white"/>
+			<stop offset=".52" stop-color="white" stop-opacity=".72"/>
+			<stop offset=".56" stop-color="white" stop-opacity=".56"/>
+			<stop offset=".60" stop-color="white" stop-opacity=".44"/>
+			<stop offset=".65" stop-color="white" stop-opacity=".30"/>
+			<stop offset=".71" stop-color="white" stop-opacity=".19"/>
+			<stop offset=".77" stop-color="white" stop-opacity=".135"/>
+			<stop offset=".83" stop-color="white" stop-opacity=".09"/>
+			<stop offset=".89" stop-color="white" stop-opacity=".058"/>
+			<stop offset=".90" stop-color="white" stop-opacity=".052"/>
+			<stop offset=".91" stop-color="white" stop-opacity=".046"/>
+			<stop offset=".92" stop-color="white" stop-opacity=".039"/>
+			<stop offset=".93" stop-color="white" stop-opacity=".032"/>
+			<stop offset=".94" stop-color="white" stop-opacity=".025"/>
+			<stop offset=".95" stop-color="white" stop-opacity=".019"/>
+			<stop offset=".96" stop-color="white" stop-opacity=".013"/>
+			<stop offset=".97" stop-color="white" stop-opacity=".0075"/>
+			<stop offset=".98" stop-color="white" stop-opacity=".0035"/>
+			<stop offset=".99" stop-color="white" stop-opacity=".001"/>
+			<stop offset="1" stop-color="white" stop-opacity="0"/>
+		</radialGradient>
+		<mask id="dsh-fairy-halo-layer-mask" mask-type="luminance" maskUnits="userSpaceOnUse" maskContentUnits="userSpaceOnUse" x="-260" y="-120" width="680" height="440">
+			<rect x="-260" y="-120" width="680" height="440" fill="url(#dsh-fairy-halo-layer-fade)"/>
+		</mask>
+	</defs>
+	<g mask="url(#dsh-fairy-halo-layer-mask)" opacity=".99"><path d="M-96.61 -33.75h368.45M-96.16 -32.75h366.78M-95.68 -31.75h365.14M-95.21 -30.75h363.55M-94.76 -29.75h362.05M-94.37 -28.75h360.67M-94.05 -27.75h359.44M-93.85 -26.75h358.39M-98.42 -18.75h358.49M-99.92 -17.75h359.63M-101.62 -16.75h360.98M-103.50 -15.75h362.53M-105.55 -14.75h364.24M-107.74 -13.75h366.10M-110.03 -12.75h368.05M-112.41 -11.75h370.09M-114.82 -10.75h372.15M-117.24 -9.75h374.22M-119.62 -8.75h376.25M-121.93 -7.75h378.21M-124.13 -6.75h380.06M-126.17 -5.75h381.77M-128.02 -4.75h383.32M-129.65 -3.75h384.68M-131.03 -2.75h385.83M-129.09 6.25h385.76M-127.28 7.25h384.76M-125.20 8.25h383.64M-122.89 9.25h382.43M-120.39 10.25h381.17M-117.73 11.25h379.87M-114.96 12.25h378.58M-112.11 13.25h377.33M-109.24 14.25h376.14M-106.37 15.25h375.05M-103.57 16.25h374.07M-100.86 17.25h373.22M-98.28 18.25h372.51M-95.88 19.25h371.97M-93.67 20.25h371.59M-91.69 21.25h371.37M-89.96 22.25h371.31M-88.50 23.25h371.40M-87.31 24.25h371.62M-86.40 25.25h371.95M-85.78 26.25h372.38M-85.44 27.25h372.87M-85.36 28.25h373.39M-85.54 29.25h373.92M-85.95 30.25h374.42M-86.58 31.25h374.86M-87.39 32.25h375.21M-88.35 33.25h375.43M-89.45 34.25h375.50M-90.63 35.25h375.38M-91.89 36.25h375.07M-93.17 37.25h374.55M-94.45 38.25h373.79M-95.71 39.25h372.81M-96.92 40.25h371.58M-98.06 41.25h370.13M-99.10 42.25h368.47M-100.04 43.25h366.60M-100.85 44.25h364.57M-101.54 45.25h362.40M-102.11 46.25h360.12M-109.48 66.25h358.93M-110.88 67.25h362.93M-112.40 68.25h367.22M-114.02 69.25h371.73M-115.71 70.25h376.41M-117.44 71.25h381.18M-119.18 72.25h385.97M-106.15 95.25h385.36M-103.18 96.25h380.13M-100.23 97.25h374.84M-97.35 98.25h369.60M-94.59 99.25h364.45M-91.97 100.25h359.49M-103.19 124.25h359.39M-104.89 125.25h362.12M-106.45 126.25h364.71M-107.84 127.25h367.13M-109.07 128.25h369.35M-110.12 129.25h371.36M-110.99 130.25h373.15M-111.68 131.25h374.72M-112.20 132.25h376.07M-112.57 133.25h377.21M-112.79 134.25h378.17M-112.90 135.25h378.94M-112.90 136.25h379.58M-112.82 137.25h380.09M-112.69 138.25h380.51M-112.52 139.25h380.88M-112.36 140.25h381.22M-112.21 141.25h381.57M-112.11 142.25h381.95M-112.06 143.25h382.39M-112.10 144.25h382.91M-112.23 145.25h383.54M-112.46 146.25h384.29M-112.80 147.25h385.17M-113.11 172.25h384.75M-110.80 173.25h380.83M-108.33 174.25h376.62M-105.74 175.25h372.18M-103.06 176.25h367.57M-100.34 177.25h362.84M-97.60 178.25h358.05" fill="none" stroke="currentColor" stroke-width=".62" stroke-linecap="butt" opacity="0.750"/><path d="M-93.77 -25.75h357.55M-93.85 -24.75h356.93M-94.10 -23.75h356.55M-94.55 -22.75h356.42M-95.19 -21.75h356.55M-96.05 -20.75h356.94M-97.13 -19.75h357.59M-102.55 47.25h357.78M-102.88 48.25h355.42M-103.09 49.25h353.09M-103.22 50.25h350.84M-103.27 51.25h348.72M-103.27 52.25h346.79M-103.24 53.25h345.09M-103.19 54.25h343.66M-103.16 55.25h342.57M-103.18 56.25h341.83M-103.25 57.25h341.51M-103.41 58.25h341.61M-103.68 59.25h342.16M-104.07 60.25h343.19M-104.59 61.25h344.68M-105.27 62.25h346.66M-106.09 63.25h349.09M-107.07 64.25h351.97M-108.20 65.25h355.26M-89.55 101.25h354.78M-87.35 102.25h350.37M-85.40 103.25h346.33M-83.73 104.25h342.70M-82.37 105.25h339.52M-81.32 106.25h336.83M-80.59 107.25h334.65M-80.20 108.25h332.99M-80.13 109.25h331.86M-80.38 110.25h331.26M-80.93 111.25h331.16M-81.77 112.25h331.56M-82.88 113.25h332.42M-84.22 114.25h333.70M-85.77 115.25h335.37M-87.49 116.25h337.38M-89.35 117.25h339.67M-91.31 118.25h342.21M-93.33 119.25h344.92M-95.38 120.25h347.77M-97.43 121.25h350.69M-99.43 122.25h353.63M-101.36 123.25h356.54M-94.90 179.25h353.28M-92.27 180.25h348.60M-89.76 181.25h344.07M-87.41 182.25h339.77M-85.25 183.25h335.76M-83.32 184.25h332.10" fill="none" stroke="currentColor" stroke-width=".62" stroke-linecap="butt" opacity="0.625"/><path d="M-132.12 -1.75h386.75M-132.91 -0.75h387.44M-133.37 0.25h387.88M-133.50 1.25h388.08M-133.29 2.25h388.04M-132.73 3.25h387.78M-131.84 4.25h387.29M-130.62 5.25h386.62M-120.91 73.25h390.71M-122.58 74.25h395.33M-124.16 75.25h399.76M-125.61 76.25h403.91M-126.91 77.25h407.73M-128.02 78.25h411.15M-122.13 89.25h411.73M-119.88 90.25h408.28M-117.42 91.25h404.37M-114.78 92.25h400.05M-112.00 93.25h395.40M-109.10 94.25h390.48M-113.26 148.25h386.17M-113.82 149.25h387.31M-114.49 150.25h388.56M-115.26 151.25h389.92M-116.10 152.25h391.36M-117.00 153.25h392.86M-117.94 154.25h394.39M-118.89 155.25h395.91M-119.83 156.25h397.38M-120.73 157.25h398.76M-121.56 158.25h400.01M-122.28 159.25h401.09M-122.88 160.25h401.96M-123.32 161.25h402.56M-123.57 162.25h402.87M-123.62 163.25h402.84M-123.45 164.25h402.46M-123.03 165.25h401.68M-122.37 166.25h400.50M-121.45 167.25h398.90M-120.26 168.25h396.88M-118.83 169.25h394.44M-117.14 170.25h391.59M-115.23 171.25h388.35" fill="none" stroke="currentColor" stroke-width=".62" stroke-linecap="butt" opacity="0.875"/><path d="M-128.91 79.25h414.12M-129.56 80.25h416.57M-129.93 81.25h418.48M-130.02 82.25h419.80M-129.81 83.25h420.50M-129.29 84.25h420.58M-128.46 85.25h420.03M-127.31 86.25h418.85M-125.87 87.25h417.05M-124.13 88.25h414.67" fill="none" stroke="currentColor" stroke-width=".62" stroke-linecap="butt" opacity="1.000"/><path d="M-81.66 185.25h328.86M-80.28 186.25h326.08M-79.22 187.25h323.82M-78.49 188.25h322.12M-78.09 189.25h321.01M-78.05 190.25h320.51M-78.35 191.25h320.63M-78.99 192.25h321.38M-79.96 193.25h322.76M-81.24 194.25h324.74" fill="none" stroke="currentColor" stroke-width=".62" stroke-linecap="butt" opacity="0.500"/></g>
+</svg>
+
+<svg class="dsh-fairy-pulse-layer" viewBox="-160 -160 480 480" xmlns="http://www.w3.org/2000/svg" role="presentation">
+	<g class="dsh-fairy-lash-pulse" fill="none" stroke="#f4fdff">
+		<g class="dsh-fairy-lash-pulse-wave">
+			<circle cx="80" cy="80" r="52" stroke-width="20" stroke-opacity=".05"/>
+			<circle cx="80" cy="80" r="52" stroke-width="16" stroke-opacity=".06"/>
+			<circle cx="80" cy="80" r="52" stroke-width="12" stroke-opacity=".08"/>
+			<circle cx="80" cy="80" r="52" stroke-width="8" stroke-opacity=".10"/>
+			<circle cx="80" cy="80" r="52" stroke-width="4.5" stroke-opacity=".09"/>
+		</g>
+	</g>
+</svg>
+
+<svg class="dsh-fairy-main" viewBox="0 0 160 160" xmlns="http://www.w3.org/2000/svg" role="presentation">
+	<defs>
+		<!-- Color, glow, scanline, and horizontal-only displacement resources. -->
+		<linearGradient id="dsh-fairy-outer-gradient" x1=".2" y1="0" x2=".8" y2="1">
+			<stop stop-color="#4053f0"/>
+			<stop offset=".54" stop-color="#3045dc"/>
+			<stop offset="1" stop-color="#3d50c8"/>
+		</linearGradient>
+		<!-- One static radial field replaces separate halo strokes, avoiding alpha seams. -->
+		<radialGradient id="dsh-fairy-sclera-halo-gradient" gradientUnits="userSpaceOnUse" cx="80" cy="80" r="56" color-interpolation="linearRGB">
+			<stop offset=".82" stop-color="#ffffff" stop-opacity="0"/>
+			<stop offset=".864" stop-color="#ffffff" stop-opacity=".22"/>
+			<stop offset=".875" stop-color="#ffffff" stop-opacity=".28"/>
+			<stop offset=".89" stop-color="#ffffff" stop-opacity=".19"/>
+			<stop offset=".91" stop-color="#ffffff" stop-opacity=".11"/>
+			<stop offset=".94" stop-color="#ffffff" stop-opacity=".07"/>
+			<stop offset=".96" stop-color="#ffffff" stop-opacity=".035"/>
+			<stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+		</radialGradient>
+		<radialGradient id="dsh-fairy-outer-halo-gradient" gradientUnits="userSpaceOnUse" cx="80" cy="80" r="79" color-interpolation="linearRGB">
+			<stop offset=".80" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity="0"/>
+			<stop offset=".84" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity=".10"/>
+			<stop offset=".868" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity=".28"/>
+			<stop offset=".90" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity=".18"/>
+			<stop offset=".95" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity=".06"/>
+			<stop offset=".99" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity=".02"/>
+			<stop offset="1" stop-color="var(--dsh-fairy-outer-halo-color)" stop-opacity="0"/>
+		</radialGradient>
+		<radialGradient id="dsh-fairy-highlight-halo-gradient" gradientUnits="userSpaceOnUse" cx="98" cy="100.5" r="18" color-interpolation="linearRGB">
+			<stop offset=".53" stop-color="#f5f8fd" stop-opacity="0"/>
+			<stop offset=".56" stop-color="#f5f8fd" stop-opacity=".16"/>
+			<stop offset=".611" stop-color="#f5f8fd" stop-opacity=".43"/>
+			<stop offset=".72" stop-color="#f5f8fd" stop-opacity=".19"/>
+			<stop offset=".77" stop-color="#f5f8fd" stop-opacity=".12"/>
+			<stop offset=".83" stop-color="#f5f8fd" stop-opacity=".055"/>
+			<stop offset=".89" stop-color="#f5f8fd" stop-opacity=".02"/>
+			<stop offset=".96" stop-color="#f5f8fd" stop-opacity=".004"/>
+			<stop offset="1" stop-color="#f5f8fd" stop-opacity="0"/>
+		</radialGradient>
+		<pattern id="dsh-fairy-lines" width="4" height="4" patternUnits="userSpaceOnUse">
+			<!-- Keep the internal scanline texture present but quieter against the eye. -->
+			<rect width="4" height="1" fill="#c9f8ff" opacity=".055"/>
+		</pattern>
+			<!-- Blue is forced to 0.5 so the displacement map moves pixels horizontally only. -->
+			<!-- Horizontal glitch noise is intentionally low-resolution. The map never
+			     moves pixels vertically, so its filter cache needs less vertical coverage
+			     and resolution while interpolation keeps the tear continuous. -->
+			<filter id="dsh-fairy-interference" x="-30%" y="0%" width="160%" height="100%" filterRes="96 72" color-interpolation-filters="sRGB">
+			<feTurbulence id="dsh-fairy-noise" type="fractalNoise" baseFrequency=".012 .72" numOctaves="1" seed="1" result="noise"/>
+			<feColorMatrix in="noise" type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 0 0 .5  0 0 0 1 0" result="horizontal-noise"/>
+			<feDisplacementMap id="dsh-fairy-displace" in="SourceGraphic" in2="horizontal-noise" scale="5" xChannelSelector="R" yChannelSelector="B"/>
+		</filter>
+		<clipPath id="dsh-fairy-disc-clip"><circle cx="80" cy="80" r="67"/></clipPath>
+		<clipPath id="dsh-fairy-thinking-eye-clip">
+			<path class="dsh-fairy-thinking-clip-shape" d="M20 60 Q80 90 140 60 V160 H20 Z"/>
+			<!-- This fixed lower region prevents curve scaling from clipping the lower eye. -->
+			<rect x="0" y="108" width="160" height="52"/>
+		</clipPath>
+		<!-- A shallow reversed arc gives Fairy the gentle, slightly drooped brow. -->
+		<clipPath id="dsh-fairy-comforting-eye-clip">
+			<path class="dsh-fairy-comforting-clip-shape" d="M20 60 Q80 30 140 60 V160 H20 Z"/>
+			<rect x="0" y="108" width="160" height="52"/>
+		</clipPath>
+		<!-- These five rectangles are resized slightly for every block-glitch event. -->
+		<clipPath id="dsh-fairy-slice-1"><rect x="4" y="12" width="152" height="25"/></clipPath>
+		<clipPath id="dsh-fairy-slice-2"><rect x="4" y="37" width="152" height="28"/></clipPath>
+		<clipPath id="dsh-fairy-slice-3"><rect x="4" y="65" width="152" height="26"/></clipPath>
+		<clipPath id="dsh-fairy-slice-4"><rect x="4" y="91" width="152" height="30"/></clipPath>
+		<clipPath id="dsh-fairy-slice-5"><rect x="4" y="121" width="152" height="27"/></clipPath>
+		</defs>
+	
+		<g class="dsh-fairy-body">
+	<!-- Stable outer radial halo stays outside the fault signal so it is not
+	     filtered or duplicated by the block-glitch clones. -->
+		<circle class="dsh-fairy-outer-halo" cx="80" cy="80" r="79" fill="url(#dsh-fairy-outer-halo-gradient)"/>
+	<g class="dsh-fairy-signal" data-fault-source="true">
+	<!-- The complete normal visual. Glitch modes filter or slice this entire group. -->
+	<g id="dsh-fairy-image" class="dsh-fairy-image">
+		<circle class="dsh-fairy-outer-disc" cx="80" cy="80" r="68" fill="url(#dsh-fairy-outer-gradient)" stroke="#f2fbff" stroke-width="1.2"/>
+	<!-- Dark circle + square form the four rotating lashes / eyelids. -->
+	<g class="dsh-fairy-corners" clip-path="url(#dsh-fairy-disc-clip)" fill="#2b3388">
+		<!-- Slightly open the eye: reduce the lid ring without changing its silhouette. -->
+		<circle cx="80" cy="80" r="51.75"/>
+		<rect x="37" y="37" width="86" height="86" rx="2" transform="rotate(3 80 80)"/>
+	</g>
+
+	<!-- Eye anatomy: sclera, layered eyeball, pupil, then highlight. -->
+	<g class="dsh-fairy-eye">
+			<!-- One animated group keeps the vector rim pixel-locked to the sclera. -->
+			<g class="dsh-fairy-sclera">
+				<circle cx="80" cy="80" r="48" fill="#eef0f5"/>
+				<circle class="dsh-fairy-sclera-halo" cx="80" cy="80" r="56" fill="url(#dsh-fairy-sclera-halo-gradient)"/>
+				<!-- A thin contact rim closes subpixel seams at the sclera/halo boundary. -->
+				<circle class="dsh-fairy-sclera-contact" cx="80" cy="80" r="48" fill="none" stroke="#ffffff" stroke-width="0.8" stroke-opacity=".16"/>
+			</g>
+		<g class="dsh-fairy-eyeball">
+			<circle class="dsh-fairy-layer-three" cx="80" cy="80" r="33" fill="#9daee0"/>
+			<circle class="dsh-fairy-layer-two" cx="80" cy="80" r="24.15" fill="#eef0f5"/>
+			<circle class="dsh-fairy-layer-two" cx="80" cy="80" r="23.5" fill="#317bcf"/>
+			<circle class="dsh-fairy-layer-one" cx="80" cy="80" r="16.6" fill="none" stroke="#f5f8fd" stroke-width=".1"/>
+			<circle class="dsh-fairy-layer-one" cx="80" cy="80" r="16" fill="#3b3d8a"/>
+				<g class="dsh-fairy-highlight dsh-fairy-layer-two">
+					<circle class="dsh-fairy-highlight-halo" cx="98" cy="100.5" r="18" fill="url(#dsh-fairy-highlight-halo-gradient)"/>
+					<circle class="dsh-fairy-highlight-glow" cx="98" cy="100.5" r="11" fill="#f5f8fd"/>
+			</g>
+		</g>
+	</g>
+	<!-- Full-eye flicker layer stays outside the scaled eye group and is not part
+	     of the fault clone source; it covers the disc and brows only. -->
+	<circle class="dsh-fairy-eye-flicker" cx="80" cy="80" r="68.6" fill="#ffffff" pointer-events="none"/>
+
+	<g clip-path="url(#dsh-fairy-disc-clip)" opacity=".42">
+		<rect class="dsh-fairy-scanlines" x="12" y="10" width="136" height="146" fill="url(#dsh-fairy-lines)"/>
+	</g>
+	</g>
+	<!-- Five complete-image clones clipped into horizontal blocks for left/right displacement. -->
+	<g class="dsh-fairy-glitch-blocks">
+		<use href="#dsh-fairy-image" class="dsh-fairy-glitch-1" clip-path="url(#dsh-fairy-slice-1)"/>
+		<use href="#dsh-fairy-image" class="dsh-fairy-glitch-2" clip-path="url(#dsh-fairy-slice-2)"/>
+		<use href="#dsh-fairy-image" class="dsh-fairy-glitch-3" clip-path="url(#dsh-fairy-slice-3)"/>
+		<use href="#dsh-fairy-image" class="dsh-fairy-glitch-4" clip-path="url(#dsh-fairy-slice-4)"/>
+		<use href="#dsh-fairy-image" class="dsh-fairy-glitch-5" clip-path="url(#dsh-fairy-slice-5)"/>
+	</g>
+	</g>
+	</g>
+		</svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="controls" aria-label="Animation controls">
+      <button type="button" data-state="normal" data-active="true">NORMAL</button>
+      <button type="button" data-state="thinking">THINKING</button>
+      <button type="button" data-state="comforting">COMFORTING</button>
+      <span class="divider"></span>
+      <button type="button" id="glitch-button">GLITCH</button>
+      <span class="divider"></span>
+      <button type="button" data-rate="0.7">SLOW</button>
+      <button type="button" data-rate="1" data-active="true">1X</button>
+      <button type="button" data-rate="1.5">FAST</button>
+      <span class="status" id="status">NORMAL</span>
+    </section>
+  </main>
+
+  <script>
+  (() => {
+    const root = document.getElementById('dsh-fairy-root');
+    const stage = document.getElementById('stage');
+    const status = document.getElementById('status');
+    const glitchButton = document.getElementById('glitch-button');
+    const stateButtons = Array.from(document.querySelectorAll('[data-state]'));
+    const rateButtons = Array.from(document.querySelectorAll('[data-rate]'));
+    const CYCLE_MS = 1440;
+
+    const sclera = root.querySelector('.dsh-fairy-sclera');
+    const layerThree = Array.from(root.querySelectorAll('.dsh-fairy-layer-three'));
+    const layerTwo = Array.from(root.querySelectorAll('.dsh-fairy-layer-two'));
+    const layerOne = Array.from(root.querySelectorAll('.dsh-fairy-layer-one'));
+    const thinkingClip = root.querySelector('.dsh-fairy-thinking-clip-shape');
+    const comfortingClip = root.querySelector('.dsh-fairy-comforting-clip-shape');
+    const signal = root.querySelector('.dsh-fairy-signal');
+
+    // The DSH runtime stops CSS fallback timelines for the eye layers and drives
+    // all concentric scales from one normalized phase.
+    [sclera, ...layerThree, ...layerTwo, ...layerOne, thinkingClip, comfortingClip]
+      .filter(Boolean)
+      .forEach((element) => { element.style.animation = 'none'; });
+
+    let epoch = performance.now();
+    let phaseAtEpoch = 0;
+    let rate = 1;
+    let paused = false;
+
+    function readPhase() {
+      if (paused) return phaseAtEpoch;
+      const elapsed = Math.max(0, performance.now() - epoch) * rate;
+      return ((phaseAtEpoch + elapsed / CYCLE_MS) % 1 + 1) % 1;
+    }
+
+    function setRate(nextRate) {
+      phaseAtEpoch = readPhase();
+      epoch = performance.now();
+      rate = nextRate;
+      root.style.setProperty('--dsh-fairy-steady-rate', String(rate));
+      root.style.setProperty('--dsh-fairy-pulse-cycle', (1.44 + 2.56 / rate) + 's');
+      root.setAttribute('data-dsh-fairy-animation-rate', String(rate));
+    }
+
+    function easeEyePhase(value) {
+      const x = Math.max(0, Math.min(1, value));
+      let low = 0;
+      let high = 1;
+      for (let index = 0; index < 12; index += 1) {
+        const t = (low + high) / 2;
+        const xValue = 3 * (1 - t) * (1 - t) * t * .72 + 3 * (1 - t) * t * t * .28 + t * t * t;
+        if (xValue < x) low = t;
+        else high = t;
+      }
+      const t = (low + high) / 2;
+      return 3 * (1 - t) * t * t + t * t * t;
+    }
+
+    function readEyeProgress(phase) {
+      const cyclePhase = ((phase % 1) + 1) % 1;
+      return easeEyePhase(cyclePhase <= .5 ? cyclePhase * 2 : 2 - cyclePhase * 2);
+    }
+
+    function render() {
+      const phase = readPhase();
+      const layers = [
+        [sclera, .985, .91, 0],
+        [layerThree, 1, .90, 45],
+        [layerTwo, 1, .87, 90],
+        [layerOne, 1, .85, 180],
+      ];
+
+      layers.forEach(([elements, from, to, leadMs]) => {
+        const targets = Array.isArray(elements) ? elements : [elements].filter(Boolean);
+        if (!targets.length) return;
+        const progress = readEyeProgress(phase + leadMs / CYCLE_MS);
+        const transform = 'scale(' + (from + (to - from) * progress).toFixed(6) + ')';
+        targets.forEach((element) => { element.style.transform = transform; });
+      });
+
+      const state = root.getAttribute('data-state');
+      const activeClip = state === 'thinking' ? thinkingClip : state === 'comforting' ? comfortingClip : null;
+      [thinkingClip, comfortingClip].forEach((clip) => {
+        if (clip && clip !== activeClip) clip.style.transform = '';
+      });
+
+      if (activeClip) {
+        const clipProgress = readEyeProgress(phase);
+        activeClip.style.transform = state === 'thinking'
+          ? 'translateY(' + (14.5 + clipProgress).toFixed(6) + 'px) scaleY(' + (.55 + .45 * clipProgress).toFixed(6) + ')'
+          : 'translateY(' + (-4 + 8 * clipProgress).toFixed(6) + 'px)';
+      }
+
+      requestAnimationFrame(render);
+    }
+
+    function clearGlitch() {
+      if (!signal) return;
+      signal.removeAttribute('data-glitch');
+      [
+        '--dsh-g-x', '--dsh-g-skew', '--dsh-g-bright', '--dsh-g-contrast',
+        '--dsh-g-s1-x', '--dsh-g-s2-x', '--dsh-g-s3-x', '--dsh-g-s4-x', '--dsh-g-s5-x',
+      ].forEach((name) => signal.style.removeProperty(name));
+    }
+
+    function pulseGlitch() {
+      if (!signal) return;
+      const mode = Math.random() < .5 ? 'threads' : 'blocks';
+      signal.style.setProperty('--dsh-g-x', (Math.random() * 1.8 - .9).toFixed(2) + 'px');
+      signal.style.setProperty('--dsh-g-skew', (Math.random() * .48 - .24).toFixed(2) + 'deg');
+      signal.style.setProperty('--dsh-g-bright', (1.02 + Math.random() * .12).toFixed(2));
+      signal.style.setProperty('--dsh-g-contrast', (1.02 + Math.random() * .14).toFixed(2));
+
+      if (mode === 'blocks') {
+        const polarity = Math.random() < .5 ? -1 : 1;
+        for (let index = 1; index <= 5; index += 1) {
+          const direction = index % 2 === 0 ? polarity : -polarity;
+          const offset = direction * (1.4 + Math.random() * 1.7);
+          signal.style.setProperty('--dsh-g-s' + index + '-x', offset.toFixed(2) + 'px');
+        }
+      }
+
+      signal.setAttribute('data-glitch', mode);
+      window.setTimeout(clearGlitch, mode === 'blocks' ? 170 : 130);
+    }
+
+    function setState(nextState) {
+      if (root.getAttribute('data-state') === nextState) return;
+      pulseGlitch();
+      window.setTimeout(() => {
+        root.setAttribute('data-state', nextState);
+        stage.setAttribute('data-fairy-state', nextState);
+        status.textContent = nextState.toUpperCase();
+        stateButtons.forEach((button) => {
+          button.dataset.active = String(button.dataset.state === nextState);
+        });
+      }, 115);
+    }
+
+    stateButtons.forEach((button) => {
+      button.addEventListener('click', () => setState(button.dataset.state));
+    });
+
+    rateButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setRate(Number(button.dataset.rate));
+        rateButtons.forEach((candidate) => {
+          candidate.dataset.active = String(candidate === button);
+        });
+      });
+    });
+
+    glitchButton.addEventListener('click', pulseGlitch);
+
+    setRate(1);
+    requestAnimationFrame(render);
+  })();
+  </script>
+</body>
+</html>

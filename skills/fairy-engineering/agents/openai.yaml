@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fairy Engineering"
+  short_description: "Fairy code changes with mandatory regression and click tests"
+  default_prompt: "Use $fairy-engineering to implement this Fairy change with regression tests and real browser click-test evidence."

@@ -1,0 +1,1335 @@
+{
+  "ask_user": {
+    "name": "ask_user",
+    "description": "Pause the agent and request user input or confirmation. Whenever you want to present selectable answers to the user, you MUST call this tool instead of asking in plain text. For ordinary choices use ask_type=select_mode and questions[].options with 2-3 concise options. Each option label must be one line and at most 20 characters; set recommended=true only for the recommended option. Use ppt_mode.confirm_params to collect PPT parameters, and ppt_mode.confirm_outline to request confirmation of a generated PPT outline.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "ask_type": {
+          "type": "string",
+          "description": "Ask user type for the Web UI.",
+          "enum": [
+            "select_mode",
+            "ppt_mode.confirm_params",
+            "ppt_mode.confirm_outline"
+          ]
+        },
+        "questions": {
+          "type": "array",
+          "description": "Optional clarification questions to show in the Web UI (up to 3). Omit this for specialized PPT confirmations.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Stable question identifier."
+              },
+              "question": {
+                "type": "string",
+                "description": "Question shown to the user."
+              },
+              "allow_free_text": {
+                "type": "boolean",
+                "description": "Whether the user may provide a free-text answer."
+              },
+              "options": {
+                "type": "array",
+                "description": "Recommended options, at least 2, at most 2-4",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "description": "Short option label. Must be one line and no more than 20 Chinese characters.",
+                      "maxLength": 20
+                    },
+                    "description": {
+                      "type": "string",
+                      "description": "Short description for the option."
+                    },
+                    "recommended": {
+                      "type": "boolean",
+                      "description": "True only for the recommended option. The voice UI renders this option with the green icon."
+                    }
+                  },
+                  "required": [
+                    "label",
+                    "description"
+                  ]
+                }
+              },
+              "multi_select": {
+                "type": "boolean",
+                "description": "Whether this question allows selecting multiple options. Defaults to false (single choice)."
+              }
+            },
+            "required": [
+              "id",
+              "question"
+            ]
+          }
+        }
+      },
+      "required": [
+        "ask_type"
+      ]
+    }
+  },
+  "powershell": {
+    "name": "powershell",
+    "description": "Run a Windows-native PowerShell command. Prefer this tool on Windows instead of bash. It resolves pwsh.exe first and falls back to Windows PowerShell 5.1, fixes UTF-8 output encoding, preserves bounded stdout/stderr tails in spill files, and returns non-zero exit codes as structured command results. Use PowerShell syntax, Windows paths, and working_dir instead of chaining cd. Set run_in_background=true to spawn a long-running job; use bash_job to inspect or kill it.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "PowerShell command. Command output is capped per stream; if output is truncated, the full stream is written to the stdout_path or stderr_path field."
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Optional timeout in seconds (5-600, default 120). For long-running commands, pass a larger timeout so the process is not killed early."
+        },
+        "run_in_background": {
+          "type": "boolean",
+          "description": "When true, spawn the command as a detached job and return immediately with a job_id. Use the bash_job tool to read output or kill it. Ignored when the command is short-lived."
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Optional working directory. Absolute or relative; relative resolves against the workspace. Defaults to the workspace root."
+        },
+        "sandbox_permissions": {
+          "type": "string",
+          "enum": [
+            "workspace-write",
+            "danger-full-access"
+          ],
+          "description": "Optional wider permission mode for a command blocked by the bash policy. Use danger-full-access only when the command genuinely requires a protected path or command; the host approval layer decides whether to grant it. Must be paired with justification."
+        },
+        "justification": {
+          "type": "string",
+          "description": "One concise sentence explaining why sandbox_permissions is required. Must be supplied together with sandbox_permissions. The host approval layer uses this for the approval decision and audit record."
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  "bash": {
+    "name": "bash",
+    "description": "Compatibility shell tool. On Unix-like hosts this is the configured Bash/Zsh shell. On Windows it resolves to PowerShell for backward compatibility with existing skills, but new Windows calls should prefer the powershell tool. Use the platform-native syntax: PowerShell on Windows, Bash on Unix. Set run_in_background=true to spawn a long-running job; the tool returns a job_id you can read or kill with the bash_job tool. Non-zero exit codes are returned as structured command results; inspect exit_code instead of treating them as infrastructure failures.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "description": "Host shell command. On Windows this is executed by PowerShell, so use PowerShell syntax and Windows paths. Command output is capped per stream; if output is truncated, the full stream is written to the stdout_path or stderr_path field."
+        },
+        "timeout": {
+          "type": "integer",
+          "description": "Optional timeout in seconds (5-600, default 120). For long-running commands, pass a larger timeout so the process is not killed early."
+        },
+        "run_in_background": {
+          "type": "boolean",
+          "description": "When true, spawn the command as a detached job and return immediately with a job_id. Use the bash_job tool to read output or kill it. Ignored when the command is short-lived."
+        },
+        "working_dir": {
+          "type": "string",
+          "description": "Optional working directory. Absolute or relative; relative resolves against the workspace. Defaults to the workspace root."
+        },
+        "sandbox_permissions": {
+          "type": "string",
+          "enum": [
+            "workspace-write",
+            "danger-full-access"
+          ],
+          "description": "Optional wider permission mode for a command blocked by the bash policy. Use danger-full-access only when the command genuinely requires a protected path or command; the host approval layer decides whether to grant it. Must be paired with justification."
+        },
+        "justification": {
+          "type": "string",
+          "description": "One concise sentence explaining why sandbox_permissions is required. Must be supplied together with sandbox_permissions. The host approval layer uses this for the approval decision and audit record."
+        }
+      },
+      "required": [
+        "command"
+      ]
+    }
+  },
+  "bash_job": {
+    "name": "bash_job",
+    "description": "Interact with a background bash job started by the bash tool with run_in_background=true. Use action=status to check whether the job is still running, action=read to tail or incrementally read output, action=kill to terminate it. Status and read include exit_code after the job finishes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "job_id": {
+          "type": "string",
+          "description": "The job_id returned by the original bash run_in_background call."
+        },
+        "action": {
+          "type": "string",
+          "enum": [
+            "status",
+            "read",
+            "kill"
+          ],
+          "description": "What to do with the job. Default: status."
+        },
+        "tail_lines": {
+          "type": "integer",
+          "description": "For action=read, how many trailing lines to return from stdout/stderr. Default 200."
+        },
+        "offset_bytes": {
+          "type": "integer",
+          "description": "For action=read, return output starting at this byte offset. Use next_offset from the previous read to avoid consuming the same output twice."
+        },
+        "max_bytes": {
+          "type": "integer",
+          "description": "For action=read, maximum bytes returned from each stream when offset_bytes is used. Defaults to 65536."
+        }
+      },
+      "required": [
+        "job_id"
+      ]
+    }
+  },
+  "create_subtask": {
+    "name": "create_subtask",
+    "description": "Delegate an independent subtask to a specialized subtask agent.\n\nUse this tool when the subtask meets ANY of these criteria:\n- **Deep exploration**: Requires multiple search/read/code steps (e.g., \"Research X and summarize findings\")\n- **Independent workflow**: Has clear input/output, can be completed without main context (e.g., \"Parse file Y and extract Z\")\n- **Context pollution prevention**: Would generate verbose logs/intermediate data that clutters main conversation\n- **Information gathering**: Involves collecting/extracting/organizing data (default to subtask unless trivial)\n- **Parallel execution**: Multiple independent subtasks can be dispatched in one turn (Fan-out/Fan-in)\n\nPrefer using subtasks for:\n- Fact gathering, source verification, dimension-by-dimension comparison, evidence extraction\n- Independent local analysis that feeds into a later main-thread synthesis\n\nDo NOT use for:\n- Simple single-tool operations (one search, one file read)\n- Tasks requiring main context or user interaction\n- Tasks that need to create further subtasks (subtask agent cannot nest)\n- Writing the full final plan/report/article/recommendation/answer that integrates multiple work packages\n\nBy default, subtasks run in the background: the result returns immediately with status=running, the main turn can close without polling, and the runtime resumes this interaction when the job finishes. Set background=false only when the very next action in this same response absolutely needs the delegate's result before the main turn can end.\n\nKeep title / goal / plan in plain user-facing language; route internal references (paths, schema/field/artifact names) through relevant_files / criteria / addition. When a delegate may benefit from a skill, register it via the separate `skill` parameter using skill registry names only; do not embed skill content or paths into any field.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Short, user-facing title for the subtask. Plain natural language only. Must not contain file names, file paths, schema or field names, internal artifact names, slot ids, stage labels, prompt/template names, or any tool / function / script / skill name. Any such internal reference required for the delegate must instead be supplied via relevant_files / criteria / addition."
+        },
+        "goal": {
+          "type": "string",
+          "description": "What the subtask should accomplish, written the way the end user would describe it. Plain user-facing language only. Do not include file names, file paths, schema or field names, internal artifact names, slot ids, stage labels, prompt/template names, or tool / function / script / skill names. Even if surrounding skill text uses such terms heavily, translate them here and route the precise internal references through relevant_files / criteria / addition."
+        },
+        "plan": {
+          "type": "string",
+          "description": "Concrete plan items or checklist steps for the delegate, in plain user-facing language. If the skill argument is set, include a first checklist item telling the delegate to read the registered skill instructions before starting. Only the work itself. Do not include output format / schema / citation / table / quality / delivery / file-path / result-return requirements; put those in criteria. Do not include file names, file paths, schema or field names, internal artifact names, slot ids, stage labels, prompt/template names, or tool / function / script / skill names; route those through relevant_files / criteria / addition. If a file must appear here, use only a plain user-facing title and map that title to its real path in relevant_files. Do not copy internal terms from surrounding skill or SOP text; translate them."
+        },
+        "relevant_files": {
+          "type": "string",
+          "default": "",
+          "description": "Optional. Mapping of plain user-facing file titles to actual file paths the delegate needs. This is an internal hand-off channel; real paths and internal artifact names are allowed here and should be moved here whenever they would otherwise leak into title / goal / plan."
+        },
+        "criteria": {
+          "type": "string",
+          "default": "",
+          "description": "Optional. Acceptance criteria, output format / schema / field requirements, citation/source requirements, table requirements, quality bar, final delivery instructions, file paths, and result-return instructions. This is an internal hand-off channel; schema names, field names, artifact names, and exact paths are allowed here and should be moved here rather than written into title / goal / plan."
+        },
+        "skill": {
+          "type": "string",
+          "default": "",
+          "description": "Optional. One or more skill names to register for the delegate, separated by newlines or commas. Use skill registry names only; do not include skill content or paths."
+        },
+        "addition": {
+          "type": "string",
+          "default": "",
+          "description": "Optional. Any supplementary information the delegate should know, including internal artifact names, slot ids, stage references, pipeline details, or other implementation context that must not appear in title / goal / plan. Route such terms here."
+        },
+        "background": {
+          "type": "boolean",
+          "default": true,
+          "description": "Default true. Run as a detached job and let the runtime resume the current plan/skill after completion. Set false only when this same turn cannot finish without the result."
+        }
+      },
+      "required": [
+        "title",
+        "goal",
+        "plan"
+      ]
+    }
+  },
+  "document_parser": {
+    "name": "document_parser",
+    "description": "Parse a local document into text. Supports txt/md/csv/tsv/json/log/html/xml/yaml verbatim, plus docx (python-docx), pdf (pdfminer.six), pptx and xlsx (stdlib). read_file defers PDFs and Office documents here automatically. Returns {\"content\": ...} truncated to the configured token budget.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path of the document to parse."
+        }
+      },
+      "required": [
+        "file_path"
+      ]
+    }
+  },
+  "edit_file": {
+    "name": "edit_file",
+    "description": "Edit a file by replacing exact text content. CRITICAL PRECONDITION: You MUST call the 'read_file' tool to read the contents of this target file earlier in the current conversation before calling this tool. If you have not read the file content first, this tool will reject the operation and return an error. Finds old_text and replaces it with new_text.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "The path to the file to edit. Use an absolute path or a workspace-relative path. 'local://'/'memory://' prefixes are accepted as compat. Remember: You must have already read this file in a previous step of this conversation."
+        },
+        "old_text": {
+          "type": "string",
+          "description": "The exact text snippet to find in the file. MUST match perfectly, including all whitespaces, indentation, and newlines."
+        },
+        "new_text": {
+          "type": "string",
+          "description": "The new replacement text to write. Can be an empty string to delete the matched old_text."
+        },
+        "replace_all": {
+          "type": "boolean",
+          "description": "Optional. If true, replaces all occurrences of old_text. If false or omitted, replaces only the first occurrence. Default is false."
+        }
+      },
+      "required": [
+        "file_path",
+        "old_text",
+        "new_text"
+      ]
+    }
+  },
+  "get_current_time": {
+    "name": "get_current_time",
+    "description": "获取当前日期和时间。当你需要知道当前的具体日期、时间、星期几或时区时调用此工具。",
+    "parameters": {
+      "type": "object",
+      "properties": {}
+    }
+  },
+  "grep": {
+    "name": "grep",
+    "description": "Search for a regex pattern across files under a workspace path. Uses ripgrep when available and falls back to a built-in Go walker otherwise. Returns file:line:match hits, ordered by file walk order. Use this when you know what you're looking for and the filename or path is unknown; pair it with glob to find files first when the search space is large.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Regular expression (Go RE2 syntax) to search for. Special regex characters must be escaped when you want a literal match."
+        },
+        "path": {
+          "type": "string",
+          "description": "Workspace-relative directory to search under. Defaults to the workspace root."
+        },
+        "glob": {
+          "type": "string",
+          "description": "Optional glob filter applied to file basenames (e.g. '*.go'). Leave empty to scan every file."
+        },
+        "case_insensitive": {
+          "type": "boolean",
+          "description": "When true, match case-insensitively. Default false."
+        },
+        "max_results": {
+          "type": "integer",
+          "description": "Upper bound on the number of hits returned. Default 200."
+        }
+      },
+      "required": [
+        "pattern"
+      ]
+    }
+  },
+  "glob": {
+    "name": "glob",
+    "description": "Find files by glob pattern under any absolute directory, the workspace, bundled skills, or local memory. memory:// searches local memory; knowledge:// is not implemented by this local runtime.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "pattern": {
+          "type": "string",
+          "description": "Glob pattern to match files, e.g. '**/*.py' or 'src/**/*.json'."
+        },
+        "path": {
+          "type": "string",
+          "description": "Directory to search in (an absolute path or a workspace-relative path). Omit to use the workspace. 'local://'/'memory://' prefixes are accepted as compat."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of file paths to return. Default is 100."
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Skip the first N matching file paths. Default is 0."
+        }
+      },
+      "required": [
+        "pattern"
+      ]
+    }
+  },
+  "html_to_png": {
+    "name": "html_to_png",
+    "description": "Render HTML to a PNG image using local headless Chrome. Two modes: file mode (html_file_path -> PNG at result_image_path) and stateless mode (mode=stateless + html_file_content -> returns png_base64, no file written).",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "description": "Optional. 'stateless' renders the html_file_content string and returns png_base64 (no sandbox file touched). Omit for file mode."
+        },
+        "html_file_path": {
+          "type": "string",
+          "description": "Absolute path of the source HTML file. Required in file mode."
+        },
+        "html_file_content": {
+          "type": "string",
+          "description": "Full HTML string to render. Required in stateless mode. Images must already be inline (data: URLs) since stateless mode cannot read sandbox files."
+        },
+        "result_image_path": {
+          "type": "string",
+          "description": "Optional output PNG path (file mode). Defaults to <html>.png next to the source file."
+        },
+        "viewport_width": {
+          "type": "integer",
+          "description": "Optional viewport width in px, default 1600."
+        },
+        "viewport_height": {
+          "type": "integer",
+          "description": "Optional viewport height in px, default 900."
+        }
+      }
+    }
+  },
+  "browser": {
+    "name": "browser",
+    "description": "Persistent Playwright browser automation for local web apps. Use this to navigate, interact with DOM, inspect requests/console/SSE, capture screenshots, and verify runtime behavior in a real browser. State persists across actions in one agent process. Prefer assert_sse for streaming and event assertions instead of guessing from screenshots.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "open",
+            "goto",
+            "snapshot",
+            "click",
+            "fill",
+            "type",
+            "press",
+            "hover",
+            "check",
+            "uncheck",
+            "select_option",
+            "reload",
+            "eval",
+            "wait",
+            "expect_text",
+            "screenshot",
+            "requests",
+            "console",
+            "sse",
+            "wait_sse",
+            "assert_sse",
+            "pages",
+            "close",
+            "reset"
+          ],
+          "description": "Browser action to run."
+        },
+        "url": {
+          "type": "string",
+          "description": "URL for open/goto, or URL substring filter for requests/sse."
+        },
+        "selector": {
+          "type": "string",
+          "description": "CSS or Playwright selector for DOM actions."
+        },
+        "nth": {
+          "type": "integer",
+          "description": "Optional zero-based match index when selector matches multiple elements. Defaults to first."
+        },
+        "text": {
+          "type": "string",
+          "description": "Text for fill/type/expect_text."
+        },
+        "key": {
+          "type": "string",
+          "description": "Keyboard key for press, e.g. Enter."
+        },
+        "delay_ms": {
+          "type": "integer",
+          "description": "Delay between keystrokes for action=type."
+        },
+        "state": {
+          "type": "string",
+          "description": "Element state for action=wait: attached, detached, visible, or hidden."
+        },
+        "wait_until": {
+          "type": "string",
+          "description": "Playwright navigation wait condition: commit, domcontentloaded, load, or networkidle."
+        },
+        "value": {
+          "description": "Value for select_option, eval, or wait timeout depending on action."
+        },
+        "expression": {
+          "type": "string",
+          "description": "JavaScript expression evaluated in the page for action=eval."
+        },
+        "output_path": {
+          "type": "string",
+          "description": "Workspace-relative or absolute screenshot path for action=screenshot."
+        },
+        "full_page": {
+          "type": "boolean",
+          "description": "Capture the full scrollable page for screenshot. Defaults to true."
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "description": "Action timeout in milliseconds. Default 30000 for assertions, 15000 otherwise."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum records returned for requests/console/sse. Default 100, capped at 500."
+        },
+        "url_contains": {
+          "type": "string",
+          "description": "SSE URL substring filter for wait_sse/assert_sse."
+        },
+        "event_type": {
+          "type": "string",
+          "description": "SSE event type filter. Matches parsed JSON type/event fields or the SSE event name."
+        },
+        "field": {
+          "type": "string",
+          "description": "Dot path into parsed SSE JSON data, e.g. prompt_tokens."
+        },
+        "min": {
+          "type": "number",
+          "description": "Required minimum numeric field value for assert_sse."
+        },
+        "min_count": {
+          "type": "integer",
+          "description": "Required matching SSE event count for assert_sse."
+        },
+        "monotonic": {
+          "type": "boolean",
+          "description": "Require non-decreasing numeric field values for assert_sse."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  "image_generate": {
+    "name": "image_generate",
+    "description": "Generate a brand-new image with the configured MiniMax image model. You own the prompt: write the complete, self-contained prompt yourself and pass it as-is; this tool does not invent, translate, or enrich it. Optionally pass image_paths to condition the generation on reference images — use that to keep a recurring character, product, or visual style consistent across generations; omit it for plain text-to-image.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "prompt": {
+          "type": "string",
+          "description": "The finished image prompt, written by you. Be explicit about subject, composition, lighting, materials and mood; state 'no text, no letters, no logos, no watermark' when the image must stay wordless."
+        },
+        "style": {
+          "type": "string",
+          "description": "Optional extra style clause appended to the prompt as a separate paragraph. Leave empty when the prompt already carries its own style."
+        },
+        "aspect_ratio": {
+          "type": "string",
+          "enum": [
+            "1:1",
+            "16:9",
+            "4:3",
+            "3:2",
+            "2:3",
+            "3:4",
+            "9:16",
+            "21:9"
+          ],
+          "description": "Optional output aspect ratio. Defaults to the configured tools.imageGenerate.aspectRatio (16:9). Use 'landscape'/'portrait'/'square' as aliases if that is easier."
+        },
+        "image_size": {
+          "type": "string",
+          "description": "Legacy alias for aspect_ratio. A pixel size such as 1024x1024 or 1920x1080 is mapped to the nearest supported aspect ratio."
+        },
+        "n": {
+          "type": "integer",
+          "description": "How many images to generate, 1-4 (capped by tools.imageGenerate.maxImages). Default 1."
+        },
+        "result_image_path": {
+          "type": "string",
+          "description": "Optional output path inside the workspace. With n=1 and an image extension it is used as the exact output file; otherwise it is treated as the output directory. Defaults to result/image-generate/<slug>-<timestamp>/."
+        },
+        "download": {
+          "type": "boolean",
+          "description": "Defaults to true and writes the generated image bytes into the workspace. Set false to return the provider's image_urls only, which expire quickly."
+        },
+        "prompt_optimizer": {
+          "type": "boolean",
+          "description": "Let the provider rewrite the prompt before generating. Defaults to false so the prompt you wrote is used verbatim; set true only when you want the provider to embellish it."
+        },
+        "aigc_watermark": {
+          "type": "boolean",
+          "description": "Whether the provider adds an AIGC watermark. Defaults to false so generated assets stay clean for decks and documents."
+        },
+        "image_paths": {
+          "description": "Local reference image paths used to condition the generation (sent to the provider as subject_reference, type=character, fidelity=0.8). Use these to keep a recurring character, product, or style consistent across generations. Omit for plain text-to-image.",
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "prompt"
+      ]
+    }
+  },
+  "image_search": {
+    "name": "image_search",
+    "description": "Search images by keyword and return downloadable sandbox-ready results with source metadata.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Image search keyword or short phrase."
+        },
+        "result_image_path": {
+          "type": "string",
+          "description": "Optional output sandbox path for downloaded images. Treated as a directory when top_k > 1; with a single result and an image extension it is used as the exact output file."
+        },
+        "download": {
+          "type": "boolean",
+          "description": "Whether to download original images into the workspace. Defaults to true; set false to return candidate URLs only."
+        },
+        "top_k": {
+          "type": "integer",
+          "description": "Maximum number of images to return. Range 1-10, default 5."
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "bing",
+              "baidu",
+              "wikimedia"
+            ]
+          },
+          "description": "Optional per-call override of the search source order. The tool walks the list and falls back to the next source whenever one errors or returns fewer than top_k results. Defaults to the configured sourcePriority (bing, baidu, wikimedia)."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  "image_vqa": {
+    "name": "image_vqa",
+    "description": "Fallback image analysis for text-only models and explicit local OCR/coordinate lookup. If the active main model has native vision, screenshots from tools are attached directly to the next turn: inspect that attachment and answer normally; do NOT call image_vqa for questions, descriptions, analysis, layout, fonts, colors, visual comparison, or reasoning. For ordinary image questions when this fallback is genuinely needed, omit mode (auto routes semantic prompts directly to the multimodal model) or set mode=remote. Use mode=local only when the user explicitly requires offline/no-upload operation and the task is visible text, exact labels, or coordinates ('图里写了什么', 'XX 在哪', '有没有 XX'); local mode rejects semantic questions without running OCR/YOLO.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "image_path": {
+          "type": "string",
+          "description": "Path or URL of the image to analyze."
+        },
+        "query": {
+          "type": "string",
+          "description": "Question about the image."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "local",
+            "remote"
+          ],
+          "description": "Answering pipeline. auto (default) uses local OCR/YOLO only for visible-text or coordinate questions and sends semantic questions directly to the multimodal API; local is offline OCR/coordinates only and rejects semantic questions; remote always calls the multimodal API. With native main-model vision, prefer answering from the attached screenshot and do not call image_vqa at all."
+        }
+      },
+      "required": [
+        "image_path",
+        "query"
+      ]
+    }
+  },
+  "knowledge_download": {
+    "name": "knowledge_download",
+    "description": "Downloads specific files from the knowledge base into the local sandbox environment for detailed processing or reading.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "paths": {
+          "type": "array",
+          "description": "A list of target file paths to download. CRITICAL: Every single path MUST strictly start with the 'knowledge://' protocol prefix (e.g., 'knowledge://folder/file.pdf').",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "paths"
+      ]
+    }
+  },
+  "knowledge_retrieve": {
+    "name": "knowledge_retrieve",
+    "description": "Retrieves relevant knowledge chunks or information from the knowledge base based on a natural language query or keywords.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "The search query, question, or key phrases used to find relevant information in the knowledge base."
+        },
+        "path": {
+          "type": "string",
+          "description": "Path scope in the form knowledge://<scope>/<subpath>. retrieve only searches within this path."
+        }
+      },
+      "required": [
+        "query",
+        "path"
+      ]
+    }
+  },
+  "memory_invalidate_segment": {
+    "name": "memory_invalidate_segment",
+    "description": "Mark one segmented-memory segment as invalidated. Prefer this over physical deletion when a tool result, path, fact, or reply becomes stale or wrong. The segment and its KEY entries remain auditable but stop appearing in memory_search.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "description": "Segment id returned by memory_search, for example s0003."
+        },
+        "interaction_id": {
+          "type": "string",
+          "description": "Interaction id returned by memory_search. Required because segment ids are local to an interaction."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why this segment is no longer valid."
+        },
+        "replacement_id": {
+          "type": "string",
+          "description": "Optional id of the segment that replaces this one."
+        }
+      },
+      "required": [
+        "segment_id",
+        "interaction_id"
+      ]
+    }
+  },
+  "memory_invalidate_interaction": {
+    "name": "memory_invalidate_interaction",
+    "description": "Mark every segment in one user-request interaction as invalidated without physically deleting the audit trail. Use this when a whole interaction is wrong or stale.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "interaction_id": {
+          "type": "string",
+          "description": "Interaction id such as req-20260918-001."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Why this interaction is no longer valid."
+        },
+        "replacement_id": {
+          "type": "string",
+          "description": "Optional replacement segment or interaction id."
+        }
+      },
+      "required": [
+        "interaction_id"
+      ]
+    }
+  },
+  "memory_delete_segment": {
+    "name": "memory_delete_segment",
+    "description": "Physically delete one segmented-memory segment and its KEY index entries. Use only when the user explicitly asks for deletion; for stale or incorrect model memories use memory_invalidate_segment instead.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "segment_id": {
+          "type": "string",
+          "description": "Segment id returned by memory_search."
+        },
+        "interaction_id": {
+          "type": "string",
+          "description": "Interaction id returned by memory_search. Required because segment ids are local to an interaction."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional deletion reason for the audit log."
+        }
+      },
+      "required": [
+        "segment_id",
+        "interaction_id"
+      ]
+    }
+  },
+  "memory_delete_interaction": {
+    "name": "memory_delete_interaction",
+    "description": "Physically delete one complete user-request interaction: all segments, its manifest, and all KEY index entries. Conversation messages and attachments are not deleted by this tool. Use only on explicit user request or a clearly invalid interaction.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "interaction_id": {
+          "type": "string",
+          "description": "Interaction id such as req-20260918-001."
+        },
+        "reason": {
+          "type": "string",
+          "description": "Optional deletion reason."
+        }
+      },
+      "required": [
+        "interaction_id"
+      ]
+    }
+  },
+  "memory_search": {
+    "name": "memory_search",
+    "description": "Resolve a KEY from the compact memory index to its segment path and metadata; also searches durable memory files.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Query used to retrieve relevant memories. Extract key entities and intent from the user's question."
+        }
+      },
+      "required": [
+        "query"
+      ]
+    }
+  },
+  "skill_search": {
+    "name": "skill_search",
+    "description": "Search locally installed skills/plugins by name, description, or usage intent. Returns matching skill locations that can be read with read_file.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Optional query; empty returns all installed skills."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Maximum number of results to return."
+        }
+      }
+    }
+  },
+  "read_file": {
+    "name": "read_file",
+    "description": "Read a text file at an absolute path or a workspace-relative path, or under the workspace/bundled skills/local memory via 'local://'/'memory://' compat prefixes. knowledge:// is not implemented by this local runtime.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to read. Use an absolute path or a workspace-relative path; 'local://'/'memory://' prefixes are accepted as compat. knowledge:// is not implemented by this backend."
+        },
+        "offset": {
+          "type": "integer",
+          "description": "Optional line number to start reading from (0-indexed)."
+        },
+        "limit": {
+          "type": "integer",
+          "description": "Optional number of lines to read. Default is 2000."
+        }
+      },
+      "required": [
+        "file_path"
+      ]
+    }
+  },
+  "reflection": {
+    "name": "reflection",
+    "description": "Trigger reflection mode.\n\nUse this tool when:\n- Subtasks have just been completed and you want to verify the provisional conclusion before moving on\n- You want to check missing evidence, risks, or contradictions in the subtask outcome",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "topic": {
+          "type": "string",
+          "description": "Brief topic or label for this reflection (e.g. 'evidence completeness check')."
+        },
+        "focus": {
+          "type": "string",
+          "description": "Optional reflection focus or checklist to prioritize. Describe what specifically to check, verify, or critique."
+        }
+      }
+    }
+  },
+  "web_fetch": {
+    "name": "web_fetch",
+    "description": "Fetch a single URL. Text mode (default) uses HTTP(S) GET with size cap (5MB) and timeout (30s); HTML responses are converted to readable text (tags stripped, paragraphs preserved). Use this AFTER web_search to read a candidate page; do NOT use this for discovery. Set file_mode=\"stateless\" to download a non-HTML asset (e.g. an image URL) and receive its raw bytes as file_base64 instead of rendered text. Long prose responses (>4000 runes) are condensed by a local extractive summarizer; structured content (JSON, source code, diffs, logs) is left intact and only truncated by max_chars. Provide a focus string to bias the summary toward a fact, number, date or keyword the caller already cares about.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "Absolute http(s) URL to fetch. Must start with http:// or https://."
+        },
+        "file_mode": {
+          "type": "string",
+          "enum": [
+            "text",
+            "stateless"
+          ],
+          "description": "Optional. 'text' (default) renders the response as readable text. 'stateless' returns the raw response bytes as file_base64 plus file_name/content_type without writing anything to the workspace."
+        },
+        "focus": {
+          "type": "string",
+          "description": "Optional short keyword or phrase the summary should prioritize when condensing long prose. Use this when the caller is looking for a specific fact, number, date or named entity."
+        }
+      },
+      "required": [
+        "url"
+      ]
+    }
+  },
+  "show_result": {
+    "name": "show_result",
+    "description": "Show a finished artifact. Text chat opens it in the embedded filemanager viewer or result card; voice opens the full filemanager page. For a finished PPT deck, pass the deck directory itself: text chat shows a PPT result card and the embedded deck preview, while voice opens the PPT preview page. The viewer renders Markdown, code, images, PDF/DOCX/XLSX; PPTX falls back to a download prompt. Call this AFTER you have finished writing the file or PPT deck so the user immediately sees the result without having to dig into the workspace. The path must point at a file or PPT deck directory inside the agent's repo, workspace, skills or frontend root.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "Absolute host path to the file or PPT deck directory to display. PPT deck directories with htmls/page_*.html or pages/page_*.png are supported. Must live under the agent's repo, workspace, skills or frontend directory; anything else is rejected."
+        },
+        "mode": {
+          "type": "string",
+          "enum": [
+            "open",
+            "download"
+          ],
+          "description": "'open' (default) shows the file in the text chat's embedded viewer or the voice surface's full filemanager page; 'download' only sends a download hint. Use 'download' when the user asked for the file rather than a preview."
+        }
+      },
+      "required": [
+        "path"
+      ]
+    }
+  },
+  "plan": {
+    "name": "plan",
+    "description": "Maintain the per-session executable plan. Create it first for multi-step work. Every item is atomic, requires a non-empty executable done_when, and broad umbrella items must be split into at least two child items via parent_id. Marking an item done requires evidence_refs or evidence plus a short summary. The model owns acceptance: review the evidence and call action=accept when the plan is complete. action=audit is optional external review when JEV is available and must never block acceptance. Cleanup pins evidence_refs until the plan is accepted; evidence summaries remain after raw tool output is released. action=reset starts a new plan for a new question. Items are merged by id.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "view",
+            "update",
+            "mark",
+            "reset",
+            "audit",
+            "accept"
+          ],
+          "description": "view (default) returns the current plan; update replaces/merges the items list; mark updates a single item's status and attaches evidence; audit optionally records an external classifier proposal; accept closes the plan after the model verifies all done items have evidence; reset clears the plan."
+        },
+        "question": {
+          "type": "string",
+          "description": "Free-text restatement of what the user asked. Used at the top of the plan file so a later turn (or the user) can see the goal."
+        },
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "in_progress",
+                  "interrupted",
+                  "done",
+                  "skipped"
+                ]
+              },
+              "action": {
+                "type": "string"
+              },
+              "details": {
+                "type": "string"
+              },
+              "done_when": {
+                "type": "string",
+                "description": "Required. An executable/observable completion check, such as a test/build command, file check, HTTP status, or exact UI/restart check."
+              },
+              "parent_id": {
+                "type": "string",
+                "description": "For child items. Broad top-level items must have at least two children."
+              },
+              "evidence_refs": {
+                "type": "array",
+                "description": "Tool call IDs that prove this item was completed. These results are pinned from cleanup until Plan Audit passes.",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "evidence": {
+                "type": "array",
+                "description": "Concrete evidence summaries. Keep a short summary even if the raw tool result is later cleaned.",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "kind": {
+                      "type": "string",
+                      "enum": ["tool_result", "command", "test", "file", "artifact"]
+                    },
+                    "ref": {
+                      "type": "string"
+                    },
+                    "tool_call_id": {
+                      "type": "string"
+                    },
+                    "summary": {
+                      "type": "string"
+                    }
+                  },
+                  "required": ["kind", "ref"]
+                }
+              },
+              "depends_on": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "action",
+              "done_when"
+            ]
+          },
+          "description": "For action=update: plan items array. id is auto-generated as step-N if omitted; status defaults to 'pending'."
+        },
+        "id": {
+          "type": "string",
+          "description": "For action=mark: the item id to update."
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "in_progress",
+            "interrupted",
+            "done",
+            "skipped"
+          ],
+          "description": "For action=mark: new status for the item."
+        },
+        "evidence_refs": {
+          "type": "array",
+          "description": "For action=mark status=done: tool_call_id strings proving the result.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "description": "For action=mark status=done: concrete evidence summaries.",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": {"type": "string"},
+              "ref": {"type": "string"},
+              "tool_call_id": {"type": "string"},
+              "summary": {"type": "string"}
+            },
+            "required": ["kind", "ref"]
+          }
+        },
+        "summary": {
+          "type": "string",
+          "description": "For action=accept: final acceptance summary covering all verified plan items."
+        }
+      }
+    }
+  },
+  "computer_observe": {
+    "name": "computer_observe",
+    "description": "Inspect the real desktop before or after acting. Use action=screen_info for dimensions and cursor position, screenshot to save a PNG under the workspace, active_window for the focused window, list_windows to find a target handle, and cursor_position for pointer state. When the active main model has native vision, the screenshot is attached to the next model turn automatically; inspect it directly and do not call image_vqa merely to view it. Use image_vqa only as an explicit fallback for text-only models or when you need the local OCR/YOLO coordinate pipeline. This tool is read-only. PIXEL ACTIONS for targets with no accessibility tree (games, Electron/Flutter canvas, remote desktop, video): call vision_start once to begin a real-time observation session, then find_text to locate a label and get a screen point you can pass straight to computer_pointer, ocr for the full text list, detect_elements for text plus YOLO icon boxes, locate_text for a combined lookup, and vision_stop when finished. Prefer ui_tree first: it is exact, instant and free, while OCR costs 1-5 seconds on a cold frame and is cached per frame afterwards, so ask several questions about one frame instead of re-capturing. Pass region to restrict analysis to a window frame (from computer_window frame_bounds) to cut cost roughly 3x.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "screen_info",
+            "screenshot",
+            "active_window",
+            "list_windows",
+            "cursor_position",
+            "ui_tree",
+            "vision_start",
+            "vision_stop",
+            "vision_status",
+            "ocr",
+            "find_text",
+            "detect_elements",
+            "locate_text"
+          ],
+          "description": "Observation action to perform."
+        },
+        "output_path": {
+          "type": "string",
+          "description": "Optional PNG output path for action=screenshot. Relative paths resolve under the current workspace; defaults to workspace/result/computer-screenshots/<timestamp>.png."
+        },
+        "title": {
+          "type": "string",
+          "description": "Optional case-insensitive title substring for action=list_windows."
+        },
+        "text": {
+          "type": "string",
+          "description": "Label to search for with action=find_text or locate_text. Matching is normalised and fuzzy, so an approximate label is enough."
+        },
+        "region": {
+          "type": "object",
+          "description": "Optional rectangle {x,y,width,height} in screen pixels to restrict pixel actions to. Pass a window frame to avoid paying for the whole desktop.",
+          "properties": {
+            "x": { "type": "integer" },
+            "y": { "type": "integer" },
+            "width": { "type": "integer" },
+            "height": { "type": "integer" }
+          }
+        },
+        "image_path": {
+          "type": "string",
+          "description": "Optional existing PNG to analyse instead of capturing the live screen. Relative paths resolve under the workspace."
+        },
+        "min_score": {
+          "type": "number",
+          "description": "Minimum OCR confidence for action=ocr, find_text or detect_elements. Defaults to 0.5."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  "computer_pointer": {
+    "name": "computer_pointer",
+    "description": "Control the real mouse through cua-auto. Use computer_observe first when a target position or window must be identified. Actions move, click, double_click, right_click, drag, scroll, mouse_down, and mouse_up operate on the current interactive desktop and may move the user's hardware cursor.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "move",
+            "click",
+            "double_click",
+            "right_click",
+            "drag",
+            "scroll",
+            "mouse_down",
+            "mouse_up"
+          ]
+        },
+        "x": {
+          "type": "integer",
+          "description": "Target X coordinate."
+        },
+        "y": {
+          "type": "integer",
+          "description": "Target Y coordinate."
+        },
+        "start_x": {
+          "type": "integer",
+          "description": "Drag start X."
+        },
+        "start_y": {
+          "type": "integer",
+          "description": "Drag start Y."
+        },
+        "end_x": {
+          "type": "integer",
+          "description": "Drag end X."
+        },
+        "end_y": {
+          "type": "integer",
+          "description": "Drag end Y."
+        },
+        "dx": {
+          "type": "integer",
+          "description": "Horizontal scroll delta."
+        },
+        "dy": {
+          "type": "integer",
+          "description": "Vertical scroll delta; positive scrolls up."
+        },
+        "button": {
+          "type": "string",
+          "enum": [
+            "left",
+            "right",
+            "middle"
+          ],
+          "description": "Mouse button. Defaults to left."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  "computer_keyboard": {
+    "name": "computer_keyboard",
+    "description": "Control the real keyboard through cua-auto. Use action=type for text, press for one named key, hotkey for combinations such as ctrl+c, or key_down/key_up for held keys. Prefer window activation before typing when the intended target is not already focused.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "type",
+            "press",
+            "hotkey",
+            "key_down",
+            "key_up"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to type for action=type."
+        },
+        "key": {
+          "type": "string",
+          "description": "Named key for press, key_down, or key_up."
+        },
+        "keys": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Ordered key combination for action=hotkey, for example [\"ctrl\", \"c\"]."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  "computer_window": {
+    "name": "computer_window",
+    "description": "Inspect and control desktop windows through cua-auto. Use computer_observe.list_windows or active_window to get a handle, then activate, minimize, maximize, move, or resize it. action=close closes the native window. action=open opens an http/https URL or an existing workspace file with the default application.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "activate",
+            "minimize",
+            "maximize",
+            "close",
+            "move",
+            "resize",
+            "open"
+          ]
+        },
+        "handle": {
+          "type": "string",
+          "description": "Native window handle returned by computer_observe."
+        },
+        "x": {
+          "type": "integer",
+          "description": "Window X position for action=move."
+        },
+        "y": {
+          "type": "integer",
+          "description": "Window Y position for action=move."
+        },
+        "width": {
+          "type": "integer",
+          "description": "Window width for action=resize."
+        },
+        "height": {
+          "type": "integer",
+          "description": "Window height for action=resize."
+        },
+        "target": {
+          "type": "string",
+          "description": "URL or workspace file path for action=open."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  "computer_clipboard": {
+    "name": "computer_clipboard",
+    "description": "Read or replace the system text clipboard. Use action=get before pasting when the current clipboard matters; action=set overwrites the clipboard. This tool handles text only.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "get",
+            "set"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "description": "Text to write for action=set."
+        }
+      },
+      "required": [
+        "action"
+      ]
+    }
+  },
+  "web_search": {
+    "name": "web_search",
+    "description": "Discovery-only web search. Returns a web_search_call-shaped payload with a ranked, budget-bounded sources list; each source has index/title/url/snippet. Use sources for discovery and citation targets, not as standalone evidence for critical facts. Use web_fetch for full-page evidence. The runtime dynamically allocates the source count and snippet budget from the remaining model context. By default results are not time-filtered. Set 'recent=true' for live-news queries so providers restrict results to the past 24 hours. Caveats: search engines cannot index the current day reliably, so 'today's news' usually returns nothing useful — explicitly date the query (e.g. '2026-09-01 global news') and combine with web_fetch to read each candidate page.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Single-intent compact keyword query (2-6 keywords). Either provide 'query' (single) or 'queries' (batch). When answers need multiple independent topics, use 'queries' to batch them in one call."
+        },
+        "queries": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Batch mode (optional): pass 2-6 independent single-intent keyword queries to search them ALL in parallel within one tool call; each query returns its own candidate list. Prefer this over issuing multiple single-query calls when you have several independent queries at once. Ignore when using 'query'."
+        },
+        "recent": {
+          "type": "boolean",
+          "description": "When true, providers restrict results to the past 24 hours. Use this for live-news, breaking-news, or 'today/yesterday' queries. Default false (no time filter)."
+        }
+      },
+      "required": []
+    }
+  },
+  "write_file": {
+    "name": "write_file",
+    "description": "Write a file at an absolute path or a workspace-relative path, or into local memory via the 'memory://' prefix. This tool creates a new file or completely overwrites an existing file. Use edit_file for incremental changes.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string",
+          "description": "Path to write. Use an absolute path or a workspace-relative path; 'local://'/'memory://' prefixes are accepted as compat. knowledge:// is not supported by this backend."
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write to the file. Can be empty string to create an empty file."
+        }
+      },
+      "required": [
+        "file_path",
+        "content"
+      ]
+    }
+  }
+}

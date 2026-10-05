@@ -1,0 +1,18 @@
+requests==2.32.5
+beautifulsoup4==4.14.3
+Pillow==11.3.0
+python-docx==1.2.0
+pdfminer.six==20260107
+cua-auto==0.1.2; python_version >= "3.11" and python_version < "3.14"
+# Computer control vision path: OCR + YOLO on ONNX Runtime.
+# Used by agent/internal/biz/tool/local/cua_vision_service.py, which the
+# computer_observe vision actions start on demand.
+onnxruntime==1.29.0; sys_platform == "win32"
+rapidocr-onnxruntime==1.2.3; sys_platform == "win32"
+mss==10.2.0; sys_platform == "win32"
+dxcam==0.3.0; sys_platform == "win32"
+# Video summary pipeline: platform download, audio/video decoding, local STT.
+yt-dlp==2026.8.19
+imageio-ffmpeg==0.6.0
+# sherpa-onnx is the local recogniser used when a video has no captions.
+sherpa-onnx==1.13.8; sys_platform == "win32"
