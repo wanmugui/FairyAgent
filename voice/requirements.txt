@@ -1,0 +1,4 @@
+numpy==2.5.2
+onnxruntime==1.29.0
+sentencepiece==0.2.2
+websockets==17.3

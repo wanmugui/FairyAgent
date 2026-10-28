@@ -1,0 +1,344 @@
+/* Provider management panel.
+   The tab strip, the model chips and the form follow the same CSS variables
+   as the rest of the shell, so the panel follows the active theme. */
+
+.provider-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Tab strip */
+
+.provider-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.provider-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--app-panel, var(--panel));
+  color: var(--app-tx2, var(--tx2));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.provider-tab:hover {
+  color: var(--app-tx, var(--tx));
+}
+
+.provider-tab.is-active {
+  background: var(--ui-accent-soft, var(--app-line, var(--line)));
+  border-color: var(--ui-accent, var(--app-line, var(--line)));
+  color: var(--ui-accent, var(--app-tx, var(--tx)));
+  font-weight: 600;
+}
+
+.provider-tab-count {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.provider-tab-add {
+  border-style: dashed;
+}
+
+.provider-tab-refresh {
+  padding: 5px 8px;
+}
+
+.provider-spin {
+  animation: provider-spin 0.9s linear infinite;
+}
+
+@keyframes provider-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Model chips */
+
+.provider-models {
+  background: var(--app-panel, var(--panel));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.provider-models-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-tx, var(--tx));
+  margin-bottom: 9px;
+}
+
+.provider-link {
+  background: none;
+  border: 0;
+  color: var(--ui-accent, var(--app-tx, var(--tx)));
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.provider-model-chips {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.provider-model-chip {
+  background: var(--app-bg, var(--bg));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 999px;
+  padding: 5px 12px;
+  font-size: 12px;
+  color: var(--app-tx2, var(--tx2));
+  cursor: pointer;
+}
+
+.provider-model-chip.is-static {
+  cursor: default;
+  color: var(--app-mut, var(--mut));
+}
+
+.provider-empty {
+  padding: 16px 4px;
+  font-size: 12px;
+  color: var(--app-mut, var(--mut));
+}
+
+/* Form */
+
+.provider-form {
+  background: var(--app-panel, var(--panel));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.provider-form-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-tx, var(--tx));
+  margin-bottom: 10px;
+}
+
+.provider-key-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.provider-key-row .fairy-input {
+  flex: 1;
+}
+
+.provider-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--app-bg, var(--bg));
+  color: var(--app-mut, var(--mut));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.provider-icon-btn:hover {
+  color: var(--app-tx, var(--tx));
+}
+
+.provider-select-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.provider-select-row .fairy-input {
+  width: 100%;
+  appearance: none;
+  padding-right: 26px;
+}
+
+.provider-select-caret {
+  position: absolute;
+  right: 9px;
+  color: var(--app-mut, var(--mut));
+  pointer-events: none;
+}
+
+.provider-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--app-mut, var(--mut));
+  background: var(--app-bg, var(--bg));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+
+.provider-hint code {
+  background: transparent;
+  padding: 0 2px;
+  color: var(--app-tx2, var(--tx2));
+}
+
+.provider-message {
+  margin-top: 9px;
+  font-size: 12px;
+  color: var(--app-mut, var(--mut));
+}
+
+.provider-message.is-error {
+  color: #e5534b;
+}
+
+.provider-available {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--app-line, var(--line));
+}
+
+.provider-available-title {
+  font-size: 12px;
+  color: var(--app-mut, var(--mut));
+  margin-bottom: 7px;
+}
+
+.provider-available-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.provider-available-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.provider-available-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 6px 9px;
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.provider-available-name {
+  font-family: var(--app-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  word-break: break-all;
+}
+
+.provider-available-tag {
+  flex: none;
+  font-size: 11px;
+  color: var(--app-mut, var(--mut));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 999px;
+  padding: 2px 9px;
+}
+
+.provider-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+.provider-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--app-bg, var(--bg));
+  color: var(--app-tx2, var(--tx2));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  padding: 6px 13px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.provider-btn:hover {
+  color: var(--app-tx, var(--tx));
+}
+
+.provider-btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+/* The per-row "添加" button: an outline, not a solid accent block. */
+.provider-btn--add {
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--ui-text-dim);
+  background: transparent;
+  border: 1px solid var(--ui-border);
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  transition: color .12s ease, border-color .12s ease, background .12s ease;
+}
+
+.provider-btn--add:hover:not(:disabled) {
+  color: var(--ui-text);
+  border-color: var(--ui-accent, var(--app-line, var(--line)));
+  background: var(--ui-surface-2, var(--surface-2, transparent));
+}
+
+.provider-btn--add:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.provider-btn.is-primary {
+  background: var(--ui-accent, var(--app-line, var(--line)));
+  border-color: var(--ui-accent, var(--app-line, var(--line)));
+  /* The accent is a bright colour in some skins (the ZZZ skin uses an
+     acid green), so a fixed white label would be unreadable on it.
+     A dark label keeps the contrast the right way round on every skin. */
+  color: #101216;
+  font-weight: 600;
+}
+
+.provider-btn.is-primary:hover {
+  color: #101216;
+  filter: brightness(1.08);
+}
+
+.provider-btn.is-danger {
+  color: #e5534b;
+  border-color: rgba(229, 83, 75, 0.4);
+}

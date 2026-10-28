@@ -1,0 +1,21 @@
+﻿[
+  {
+    "finish_reason": "tool_calls",
+    "content": null,
+    "tool_calls": [
+      {
+        "id": "call_001",
+        "type": "function",
+        "function": {
+          "name": "read_file",
+          "arguments": "{\"path\": \"README.md\"}"
+        }
+      }
+    ]
+  },
+  {
+    "finish_reason": "stop",
+    "content": "已用 read_file 工具读取 workspace/README.md。内容见上一条 tool 消息。本轮没有更多工具可调用，结束。",
+    "tool_calls": []
+  }
+]

@@ -1,0 +1,179 @@
+﻿/* =====================================================================
+   trace 鏃堕棿杞达細缁撴瀯淇灞?   ---------------------------------------------------------------------
+   1) 鍚搁《璐村悎锛歴ticky margin-top 褰掗浂 + 鍚戜笂鍑鸿鐨勮儗鏅紝浜嬩欢琛屼笉鍐嶄粠缂濋噷閫忓嚭
+   2) 杞ㄩ亾鑷€傚簲锛歸rap 鐢?max-height锛屽瓙浠诲姟灏戞椂涓嶅啀鐣欏ぇ鐗囨鐧?   3) 鍒诲害灏?+ 杞ㄩ亾鏍囩瀵归綈锛堢函淇℃伅澧炲己锛屾部鐢ㄥ師鏈夐厤鑹诧紝涓嶆敼瑙嗚椋庢牸锛?
+   鏈枃浠跺湪 main.jsx 涓渶鍚?import锛岀敤浜庤鐩?App.css / themes.css /
+   base-skin.css / zzz-skin.css 閲岀殑鏃ф椂闂磋酱瑙勫垯銆?   ===================================================================== */
+.trace-panel {
+  --tl-line: var(--line);
+  --tl-dim: #6b7280;
+  --tl-jade: #00a37a;
+  --tl-mono: ui-monospace, Menlo, Consolas, "Courier New", monospace;
+  --tl-label: 132px;
+}
+
+/* --- 鍚搁《瀹瑰櫒锛氳创椤?+ 鑳屾櫙涓婃孩濉钩缂濋殭 --- */
+.trace-panel .trace-timeline-sticky,
+html[data-theme="base"] .trace-panel .trace-timeline-sticky,
+html[data-theme="dark"] .trace-panel .trace-timeline-sticky,
+html[data-theme="zzz"] .trace-panel .trace-timeline-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  margin: 0 -12px 10px;
+  padding: 9px 12px;
+  background: var(--panel);
+}
+/* 琛ヤ笂 sticky 涓庢粴鍔ㄥ鍣ㄥ唴杈硅窛涔嬮棿閭ｆ潯缂濓紝閬垮厤浜嬩欢琛屼粠缂濋噷閫忓嚭 */
+.trace-panel .trace-timeline-sticky::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 16px;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--panel);
+}
+.trace-panel .trace-timeline-sticky > * { position: relative; z-index: 1; }
+
+/* --- 杞ㄩ亾瀹瑰櫒锛氬唴瀹硅嚜閫傚簲锛屽幓鎺夋鐧?--- */
+.trace-panel .trace-overview-wrap,
+html[data-theme="base"] .trace-panel .trace-overview-wrap,
+html[data-theme="dark"] .trace-panel .trace-overview-wrap,
+html[data-theme="zzz"] .trace-panel .trace-overview-wrap {
+  margin-top: 8px;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  /* 杞ㄩ亾瓒呭嚭鏃跺簳閮ㄦ笎闅愶紝鎻愮ず"杩樻湁鏇村"锛岄伩鍏嶇‖鍒囦竴鍗婅建閬?*/
+  -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(180deg, #000 calc(100% - 14px), transparent 100%);
+}
+.trace-panel .trace-overview,
+html[data-theme="base"] .trace-panel .trace-overview,
+html[data-theme="dark"] .trace-panel .trace-overview,
+html[data-theme="zzz"] .trace-panel .trace-overview {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+}
+
+/* --- 鏍囩琛岋細kicker + 鍖洪棿 + 鍥句緥 --- */
+.trace-panel .trace-overview-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 0;
+}
+.trace-ov-kicker {
+  font-family: var(--tl-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--tl-dim);
+  border: 1px solid var(--tl-line);
+  border-radius: 2px;
+  padding: 2px 7px;
+}
+.trace-ov-range { font-size: 11px; }
+.trace-ov-legend { display: inline-flex; gap: 10px; }
+.trace-ov-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--tl-dim);
+}
+.trace-ov-key i { width: 8px; height: 8px; display: block; border-radius: 1px; }
+.trace-ov-key-llm i { background: #3b82f6; }
+.trace-ov-key-res i { background: #10b981; }
+.trace-ov-key-tool i { background: #f59e0b; }
+.trace-ov-key-cmp i { background: #ec4899; }
+.trace-ov-key-err i { background: #ef4444; }
+
+/* --- 鍒诲害灏?--- */
+.trace-ov-ruler-row { display: flex; align-items: flex-end; gap: 8px; margin: 6px 0 3px; }
+.trace-ov-ruler-cap {
+  flex: 0 0 var(--tl-label);
+  font-family: var(--tl-mono);
+  font-size: 9px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--tl-dim);
+}
+.trace-ov-ruler {
+  position: relative;
+  flex: 1;
+  height: 14px;
+  border-bottom: 1px solid var(--tl-line);
+}
+.trace-ov-tick {
+  position: absolute;
+  bottom: 2px;
+  transform: translateX(-50%);
+  font-family: var(--tl-mono);
+  font-size: 9px;
+  color: var(--tl-dim);
+  white-space: nowrap;
+}
+.trace-ov-tick::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  width: 1px;
+  height: 4px;
+  background: var(--tl-line);
+}
+/* 棣栧熬鍒诲害璐磋竟锛岄伩鍏嶅眳涓啓娉曟妸鏂囧瓧鐢╁嚭杞ㄩ亾 */
+.trace-ov-tick.edge-first { transform: translateX(0); }
+.trace-ov-tick.edge-first::after { left: 0; }
+.trace-ov-tick.edge-last { transform: translateX(-100%); }
+.trace-ov-tick.edge-last::after { left: 100%; }
+
+/* --- 杞ㄩ亾锛氬彧鍋氬榻愪笌鎻忚竟锛屼笉鏀硅壊 --- */
+.trace-panel .trace-overview-lane { margin-bottom: 3px; }
+.trace-panel .trace-overview-lane-label {
+  flex: 0 0 var(--tl-label);
+  font-family: var(--tl-mono);
+  font-size: 10.5px;
+  color: var(--tl-dim);
+  border-left: 2px solid var(--tl-line);
+  padding-left: 8px;
+  line-height: 18px;
+}
+.trace-panel .trace-overview-track,
+html[data-theme="base"] .trace-panel .trace-overview-track,
+html[data-theme="dark"] .trace-panel .trace-overview-track,
+html[data-theme="zzz"] .trace-panel .trace-overview-track {
+  height: 18px;
+  background-image: linear-gradient(90deg, var(--tl-line) 0 1px, transparent 1px);
+  background-size: calc(100% / 6) 100%;
+}
+
+/* --- 楂樺害鎷栨嫿鎶婃墜 --- */
+.trace-panel .trace-resize-handle {
+  height: 9px;
+  margin: 6px 0 0;
+  background: transparent;
+  border: 0;
+  cursor: ns-resize;
+}
+.trace-panel .trace-resize-handle::after {
+  content: '';
+  width: 54px;
+  height: 3px;
+  border-radius: 2px;
+  background: #d1d5db;
+  transition: background .15s;
+}
+.trace-panel .trace-resize-handle:hover::after,
+.trace-panel .trace-resize-handle.active::after { background: #4a6cf7; }

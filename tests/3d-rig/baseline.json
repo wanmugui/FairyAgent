@@ -1,0 +1,43 @@
+{
+  "_comment": "3D rig 回归基线。全部由 tests/3d-rig/blender_probe.py 实测产出，不是拍脑袋填的。重新生成：pytest tests/3d-rig/test_rig_regression.py --update-baseline。改动 rig 行为后若基线确需更新，必须在提交信息里写明理由，不要静默刷新。",
+  "_measured_at": "2026-10-05",
+  "_blend": "workspace/result/character_rigged.blend",
+  "structure": {
+    "bone_count": 20,
+    "bone_pairs": 7,
+    "free_vertices": 0,
+    "armature_modifier_first": true,
+    "use_deform_preserve_volume": true,
+    "empty_bones": ["hips", "neck", "root", "spine"]
+  },
+  "selftest": {
+    "forearm_extent_max_m": 0.35,
+    "forearm_vert_count": 3681,
+    "hand_vert_count": 1590
+  },
+  "deformation": {
+    "p50_min": 0.99,
+    "p01_min": {
+      "limit": 0.40,
+      "curl": 0.53,
+      "lean": 0.80
+    }
+  },
+  "local_quality": {
+    "forearm_flat_ratio_min": 0.85,
+    "hand_flat_ratio_min": 0.95,
+    "elbow_edge_median_ratio_min": 0.98,
+    "elbow_edge_pct_below_085_max": 0.25
+  },
+  "observed": {
+    "forearm_flat_ratio": 0.8711,
+    "hand_flat_ratio": 0.9986,
+    "elbow_edge_median_ratio": 1.0016,
+    "elbow_edge_pct_below_085": 0.1879,
+    "poses": {
+      "limit": { "p50": 1.0, "p01": 0.4479 },
+      "curl": { "p50": 1.0, "p01": 0.5809 },
+      "lean": { "p50": 1.0, "p01": 0.8524 }
+    }
+  }
+}

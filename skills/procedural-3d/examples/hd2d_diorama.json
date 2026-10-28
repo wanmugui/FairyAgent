@@ -1,0 +1,438 @@
+{
+  "notes": [
+    "3d-scene-quality 层 -1 的唯一参数来源。改这里就能重建整张 HD-2D 场景图，不用碰 py。",
+    "这份 JSON 的字段设计直接对应教程《HD-2D游戏场景/场景模版搭建提示词.md》的三条要求：",
+    "  ① 元素清单（elements）—— 教程要「一份参考图拆成 N 个元素」，这里是它的可执行形式；",
+    "  ② 锚点默认在下边缘中间（anchor 默认 bottom-center）—— 教程原话「默认情况下，中心点位于下边缘中间」；",
+    "  ③ 碰撞随缩放（collider 段）—— 教程要「自动识别尺寸并智能匹配碰撞，碰撞区域能随场景一同缩放」。",
+    "分层（depth layers）是教程「最远处场景可以分层提取为独立的几层建筑群」的三维等价物。",
+    "单位：1 单位 = 1 米。全场只有 z=0 一条地面线，任何元素都不允许悬空，这是脚本硬断言项。"
+  ],
+  "output_dir": "workspace/result/hd2d_diorama",
+  "render": {
+    "engine": "CYCLES",
+    "device": "CPU",
+    "samples": 48,
+    "denoise": true,
+    "view_transform": "AgX",
+    "exposure": -1.2,
+    "notes": "AgX 必须显式设，bpy 5.1 无头下 view_transform 默认停在 Filmic（见 SKILL.md）。CPU 48 采样对纯色块场景够用，渲三张（主图/缩略图/无空气透视对照）约半分钟。 exposure 调到 -1.2：实测整张图亮度都挤在 148~160 之间（地面和天空同亮），压边绿篱与地面只差 37 级，等于隐形——那是**对比度**问题不是位置问题，调位置没用。"
+  },
+  "camera": {
+    "location": [
+      0.0,
+      -26.0,
+      15.0
+    ],
+    "look_at": [
+      0.0,
+      11.0,
+      5.0
+    ],
+    "lens": 40.0,
+    "shift_y": 0.0,
+    "margin": 0.05,
+    "fit_exclude_note": "标 fit:false 的前景压边件不参与自动取景，允许被画面下缘裁掉。它们要的就是「压边」这个效果，容下它们反而会把相机推远、主体缩小。",
+    "notes": [
+      "location / look_at 只是**自动取景的起始点**，不是最终机位。脚本随后跑",
+      "frame_camera()：锁死视角方向，只沿视线推拉距离并在画面里把主体摆正，",
+      "直到所有元素的包围盒都落在 [margin, 1-margin] 内。",
+      "为什么必须自动取景：第一版全手写机位，远景三栋房子的顶部被画面上缘裁掉了，",
+      "而元素高度一改就得重调 —— 这正是 SKILL.md 里「几何数量正确 ≠ 构图正确」的同一类病。",
+      "教程 HD-3D 提示词写「正前方 45 度俯视，传统 Q 版日式 RPG 构图」。",
+      "本机锁定的视角方向实测俯角 23.6 度、偏航 0 度：45 度俯角会把地面压成一条线、地砖完全看不见，",
+      "所以降到 23.6 度 —— 仍是俯视，但地面层还读得出来。这是刻意偏离，已渲图对比过。",
+      "lens 40 在 35~85 区间内，避免广角畸变；教程与 backlog 都点名别用广角。",
+      "margin 0.05 意味着四边各留 5% 空白；渲完看 NDC 区间就能确认没出画，不需要靠肉眼估。"
+    ]
+  },
+  "light": {
+    "sun_energy": 4.0,
+    "sun_angle_deg": 2.5,
+    "sun_rotation_z": 35.0,
+    "fill_energy": 0.7,
+    "fill_color": [
+      0.62,
+      0.72,
+      1.0
+    ],
+    "world_strength": 0.45,
+    "world_color": [
+      0.55,
+      0.68,
+      0.95
+    ],
+    "notes": [
+      "主光方向唯一：太阳方位角 35 度，投影方向全场一致（自检清单「主光方向唯一且明确」）。",
+      "sun_angle 2.5 度给软阴影，不是默认点光硬阴影。",
+      "补光用冷色模拟天穹反弹，强度只有主光的 1/4，避免把影子填平。",
+      "world 给蓝天空色而不是纯白：地面与建筑的暗部靠它出彩度，纯白会把画面洗成灰。"
+    ]
+  },
+  "air": {
+    "fog_density": 0.012,
+    "fog_height_falloff": 0.055,
+    "fog_color": [
+      0.68,
+      0.78,
+      0.95
+    ],
+    "notes": [
+      "层 -1 只做最轻的一版雾（0.012）：目的是让三层远近在图上分得开，不是做气氛大片。",
+      "真正的雾调参在 examples/scene_atmosphere.py（层 4），别在这里重复调。",
+      "雾颜色取天光色，这样远景是「被空气吃掉」而不是「被白纸盖住」。"
+    ]
+  },
+  "ground": {
+    "size": [
+      160.0,
+      160.0
+    ],
+    "color": [
+      0.36,
+      0.45,
+      0.28
+    ],
+    "roughness": 0.92,
+    "notes": "教程「地面也单独提取成一张平面贴图，地面不要透视」—— 这里就是一个纯平面，无位移无起伏。"
+  },
+  "depth_layers": [
+    {
+      "name": "far",
+      "y": 32.0,
+      "mix_to_air": 0.7,
+      "notes": "最远层：色相整体往天光方向混 62%，是空气透视的主要承担者。对应教程「分层提取的远景建筑群」。"
+    },
+    {
+      "name": "mid",
+      "y": 17.0,
+      "mix_to_air": 0.2,
+      "notes": "中景层：混 30%。这一层是主体，饱和度必须留住。"
+    },
+    {
+      "name": "near",
+      "y": 5.0,
+      "mix_to_air": 0.0,
+      "notes": "近景层：不混色，画面里最实的一块，负责压住构图下缘。"
+    }
+  ],
+  "palette": {
+    "wall": [
+      0.86,
+      0.84,
+      0.79
+    ],
+    "wall_warm": [
+      0.9,
+      0.78,
+      0.68
+    ],
+    "roof": [
+      0.36,
+      0.34,
+      0.44
+    ],
+    "roof_warm": [
+      0.62,
+      0.34,
+      0.3
+    ],
+    "trunk": [
+      0.32,
+      0.24,
+      0.18
+    ],
+    "foliage": [
+      0.3,
+      0.52,
+      0.32
+    ],
+    "post": [
+      0.28,
+      0.26,
+      0.3
+    ],
+    "lantern": [
+      0.95,
+      0.72,
+      0.38
+    ],
+    "hedge": [
+      0.15,
+      0.27,
+      0.17
+    ],
+    "stone": [
+      0.52,
+      0.5,
+      0.47
+    ],
+    "notes": "五种基础色。墙体故意偏暖白、屋顶偏冷紫，是 HD-2D 常见的「冷顶暖墙」配色，对比靠明度不靠彩度。 hedge 压深到 0.15/0.27/0.17：渲图实测绿篱和地面亮度几乎一样，压边件白摆。"
+  },
+  "elements": [
+    {
+      "name": "far_house_a",
+      "layer": "far",
+      "kind": "building",
+      "x": -22.0,
+      "width": 7.0,
+      "depth": 5.0,
+      "height": 9.0,
+      "roof": 2.6,
+      "wall": "wall",
+      "roof_color": "roof"
+    },
+    {
+      "name": "far_house_b",
+      "layer": "far",
+      "kind": "building",
+      "x": 2.0,
+      "width": 6.0,
+      "depth": 5.0,
+      "height": 7.5,
+      "roof": 2.2,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "far_house_c",
+      "layer": "far",
+      "kind": "building",
+      "x": 22.0,
+      "width": 8.0,
+      "depth": 5.0,
+      "height": 11.0,
+      "roof": 3.0,
+      "wall": "wall",
+      "roof_color": "roof"
+    },
+    {
+      "name": "mid_house_a",
+      "layer": "mid",
+      "kind": "building",
+      "x": -13.0,
+      "width": 8.5,
+      "depth": 6.0,
+      "height": 10.5,
+      "roof": 3.2,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "mid_house_b",
+      "layer": "mid",
+      "kind": "building",
+      "x": 12.0,
+      "width": 7.5,
+      "depth": 6.0,
+      "height": 8.0,
+      "roof": 2.6,
+      "wall": "wall",
+      "roof_color": "roof"
+    },
+    {
+      "name": "mid_tree_a",
+      "layer": "mid",
+      "kind": "tree",
+      "x": -4.0,
+      "height": 8.0,
+      "trunk_radius": 0.42,
+      "canopy": 4.6
+    },
+    {
+      "name": "mid_tree_b",
+      "layer": "mid",
+      "kind": "tree",
+      "x": 21.0,
+      "height": 6.6,
+      "trunk_radius": 0.34,
+      "canopy": 3.8
+    },
+    {
+      "name": "mid_house_c",
+      "layer": "mid",
+      "kind": "building",
+      "x": 24.0,
+      "width": 6.5,
+      "depth": 6.0,
+      "height": 9.5,
+      "roof": 2.8,
+      "wall": "wall",
+      "roof_color": "roof",
+      "notes": "补右侧空档：第一版渲出来画面左右两半中间空一大片，靠这个把中景连成一条带。"
+    },
+    {
+      "name": "mid_post_c",
+      "layer": "mid",
+      "kind": "post",
+      "x": -19.0,
+      "height": 4.8,
+      "post_radius": 0.15
+    },
+    {
+      "name": "mid_tree_c",
+      "layer": "mid",
+      "kind": "tree",
+      "x": -25.0,
+      "height": 7.4,
+      "trunk_radius": 0.36,
+      "canopy": 4.2
+    },
+    {
+      "name": "mid_house_d",
+      "layer": "mid",
+      "kind": "building",
+      "x": 6.0,
+      "width": 7.0,
+      "depth": 6.0,
+      "height": 12.5,
+      "roof": 3.4,
+      "wall": "wall_warm",
+      "roof_color": "roof",
+      "notes": "中景主楼：抬高到 12.5 米给画面一个焦点物。教程/backlog 都要求「焦点物唯一」，高度就是焦点手段。"
+    },
+    {
+      "name": "near_tree_b",
+      "layer": "near",
+      "kind": "tree",
+      "x": 24.0,
+      "height": 9.0,
+      "trunk_radius": 0.48,
+      "canopy": 5.4
+    },
+    {
+      "name": "near_house",
+      "layer": "near",
+      "kind": "building",
+      "x": -16.0,
+      "width": 11.0,
+      "depth": 8.0,
+      "height": 12.0,
+      "roof": 4.0,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "near_tree",
+      "layer": "near",
+      "kind": "tree",
+      "x": 7.0,
+      "height": 11.0,
+      "trunk_radius": 0.6,
+      "canopy": 6.4
+    },
+    {
+      "name": "near_post",
+      "layer": "near",
+      "kind": "post",
+      "x": -2.0,
+      "height": 4.2,
+      "post_radius": 0.16
+    },
+    {
+      "name": "near_lantern",
+      "layer": "near",
+      "kind": "lantern",
+      "x": 0.0,
+      "height": 4.0,
+      "post_radius": 0.14
+    },
+    {
+      "name": "far_post",
+      "layer": "far",
+      "kind": "post",
+      "x": 28.0,
+      "height": 5.0,
+      "post_radius": 0.16
+    },
+    {
+      "name": "fg_hedge",
+      "fit": false,
+      "layer": "near",
+      "kind": "block",
+      "x": 0.0,
+      "y": -45.0,
+      "width": 46.0,
+      "depth": 4.0,
+      "height": 3.4,
+      "color": "hedge",
+      "notes": "前景连续绿篱：横铺 56 米压住画面下缘（第一版给到 78 米，结果自动取景为了塞下它把相机推到 120 米外，全场元素都缩小了一号——压边体块不能比场景横向跨度还宽）。渲图实测——只有几根立柱时脚下空地依然明显，加这条之后构图才成立。层 -1 的第四条落地做法：横向跨度决定相机退多远，也就决定空地有多少，靠连续体块而不是靠摆件数量补。"
+    },
+    {
+      "name": "mid_hedge",
+      "layer": "mid",
+      "kind": "block",
+      "x": -4.0,
+      "y": 12.0,
+      "width": 40.0,
+      "depth": 2.4,
+      "height": 1.8,
+      "color": "hedge",
+      "notes": "中景矮绿篱，把中景与近景之间那条空地接上，同时给近景房子一个落脚线。"
+    },
+    {
+      "name": "fg_post_a",
+      "fit": false,
+      "layer": "near",
+      "kind": "post",
+      "x": -17.0,
+      "y": -43.0,
+      "height": 4.6,
+      "post_radius": 0.17,
+      "notes": "前景压边排：四个等距柱把画面下缘沿横向连起来。"
+    },
+    {
+      "name": "fg_post_b",
+      "fit": false,
+      "layer": "near",
+      "kind": "post",
+      "x": 11.0,
+      "y": -43.0,
+      "height": 4.6,
+      "post_radius": 0.17
+    },
+    {
+      "name": "fg_post_c",
+      "fit": false,
+      "layer": "near",
+      "kind": "post",
+      "x": 16.0,
+      "y": -43.0,
+      "height": 4.6,
+      "post_radius": 0.17
+    },
+    {
+      "name": "fg_post_l",
+      "fit": false,
+      "layer": "near",
+      "kind": "post",
+      "x": -8.0,
+      "y": -42.0,
+      "height": 4.6,
+      "post_radius": 0.18,
+      "notes": "前景遮挡件：单条覆盖 y 把它拉到相机跟前。HD-2D 惯用前景压边；渲图实测第一版只有一个前景件，画面下半仍大片空地，加到四根才连成一条带。"
+    },
+    {
+      "name": "fg_lantern_r",
+      "fit": false,
+      "layer": "near",
+      "kind": "lantern",
+      "x": 5.0,
+      "y": -43.0,
+      "height": 4.4,
+      "post_radius": 0.16,
+      "notes": "右前景灯笼，既填构图又给画面一点暖色光源点缀。与 fg_post_l 成对，比例是一左一右。"
+    }
+  ],
+  "collider": {
+    "enabled": true,
+    "mode": "bbox",
+    "pad": 0.05,
+    "notes": [
+      "教程：「自动识别贴图尺寸，并智能匹配碰撞区域。且碰撞区域能随场景一同缩放」。",
+      "本例用求值后的世界包围盒当碰撞代理（bbox 模式），pad 是外扩厚度。",
+      "脚本会打印每个元素的碰撞盒尺寸 —— 碰撞随缩放这条之所以成立，是因为 bbox 是从",
+      "求值后的几何算的：元素 scale 改了，盒子跟着变，不存在手填数值与模型脱钩的可能。"
+    ]
+  }
+}

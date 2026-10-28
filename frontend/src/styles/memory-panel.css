@@ -1,0 +1,413 @@
+/* ============================================================
+   记忆栏：日历 + 每日摘要 + 清理周期
+   ------------------------------------------------------------
+   挂在设置面板的「记忆」Section 里。用 --ui-* 变量，跟随三套皮肤。
+   ============================================================ */
+
+.mem-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.mem-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mem-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mem-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 6px;
+  border: 1px solid var(--ui-line);
+  border-radius: 6px;
+  background: var(--ui-panel-solid);
+  color: var(--ui-text-2);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.mem-btn:hover:not(:disabled) {
+  background: var(--ui-hover);
+  border-color: var(--ui-line-strong);
+  color: var(--ui-accent);
+}
+
+.mem-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.mem-btn--ghost {
+  background: transparent;
+  border-color: transparent;
+}
+
+.mem-error {
+  padding: 8px 10px;
+  border: 1px solid var(--ui-danger);
+  border-radius: 6px;
+  background: rgba(220, 38, 38, .08);
+  color: var(--ui-danger);
+  font-size: 12px;
+}
+
+/* ---- 日历 ---- */
+
+.mem-cal {
+  padding: 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background: var(--ui-panel-soft);
+}
+
+.mem-cal__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.mem-cal__month {
+  color: var(--ui-text);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.mem-cal__weekdays,
+.mem-cal__grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.mem-cal__weekdays {
+  margin-bottom: 4px;
+}
+
+.mem-cal__weekdays span {
+  text-align: center;
+  color: var(--ui-muted);
+  font-size: 11px;
+  line-height: 20px;
+}
+
+.mem-cal__day {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1 / 1;
+  min-height: 30px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ui-text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.mem-cal__day:hover:not(:disabled) {
+  background: var(--ui-hover);
+  border-color: var(--ui-line);
+}
+
+.mem-cal__day:disabled {
+  color: var(--ui-line-strong);
+  cursor: default;
+}
+
+/* 不在当前月的日期：靠颜色区分，不用 opacity。
+   opacity 会把深色皮肤里的 --ui-muted 一起压暗，文字会糊到看不清。 */
+.mem-cal__day--muted {
+  color: var(--ui-muted);
+  opacity: .55;
+}
+
+.mem-cal__day--muted:disabled {
+  color: var(--ui-line-strong);
+  opacity: .8;
+}
+
+.mem-cal__day--has {
+  color: var(--ui-text);
+  font-weight: 600;
+  background: var(--ui-accent-soft);
+  border-color: var(--ui-accent-ring);
+}
+
+/* 有记忆的日子用实心圆点标记，别只靠颜色——色弱也要能分辨 */
+.mem-cal__day--has::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 50%;
+  width: 4px;
+  height: 4px;
+  margin-left: -2px;
+  border-radius: 50%;
+  background: var(--ui-accent);
+}
+
+.mem-cal__day--today {
+  border-color: var(--ui-line-strong);
+}
+
+.mem-cal__day--active {
+  background: var(--ui-accent);
+  border-color: var(--ui-accent);
+  color: var(--ui-accent-contrast);
+}
+
+.mem-cal__day--active::after {
+  background: var(--ui-accent-contrast);
+}
+
+.mem-cal__foot {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--ui-line);
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+/* ---- 区块 ---- */
+
+.mem-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mem-section__title {
+  color: var(--ui-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mem-section__hint {
+  color: var(--ui-muted);
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.mem-section__hint code {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--ui-panel-alt);
+  color: var(--ui-text-2);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+}
+
+/* ---- 保留期选择 ---- */
+
+.mem-retention {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mem-chip {
+  padding: 5px 11px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--ui-panel-solid);
+  color: var(--ui-text-2);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background .15s ease, border-color .15s ease, color .15s ease;
+}
+
+.mem-chip:hover:not(:disabled) {
+  border-color: var(--ui-accent);
+  color: var(--ui-accent);
+}
+
+.mem-chip.is-on {
+  border-color: var(--ui-accent);
+  background: var(--ui-accent);
+  color: var(--ui-accent-contrast);
+  font-weight: 600;
+}
+
+.mem-chip:disabled {
+  opacity: .6;
+  cursor: not-allowed;
+}
+
+.mem-note {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+.mem-archive {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--ui-muted);
+  font-size: 11px;
+}
+
+/* ---- 当天交互 ---- */
+
+.mem-day {
+  max-height: 420px;
+  overflow-y: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 8px;
+  background: var(--ui-panel-soft);
+}
+
+.mem-day__date {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--ui-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mem-day__count {
+  color: var(--ui-muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+
+/* 交互列表内部可滚动，提示一下主人下面还有内容 */
+.mem-day__hint {
+  margin-left: auto;
+  color: var(--ui-muted);
+  font-size: 10px;
+  font-weight: 400;
+  opacity: .75;
+}
+
+.mem-day__session + .mem-day__session {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ui-line);
+}
+
+.mem-day__heading {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 5px;
+  color: var(--ui-text-2);
+  font-size: 11px;
+}
+
+.mem-day__time {
+  color: var(--ui-accent);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-weight: 600;
+}
+
+.mem-day__id {
+  color: var(--ui-muted);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 10px;
+}
+
+.mem-day__tools {
+  color: var(--ui-muted);
+  font-size: 10px;
+}
+
+.mem-day__line {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 3px;
+}
+
+.mem-day__tag {
+  flex: 0 0 auto;
+  margin-top: 1px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 10px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.mem-day__tag--ask {
+  background: var(--ui-accent-soft);
+  color: var(--ui-accent);
+}
+
+.mem-day__tag--reply {
+  background: var(--ui-panel-alt);
+  color: var(--ui-text-2);
+}
+
+.mem-day__q {
+  color: var(--ui-text-2);
+  font-size: 11px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.mem-day__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.mem-key {
+  max-width: 100%;
+  padding: 1px 6px;
+  border: 1px solid var(--ui-line);
+  border-radius: 999px;
+  background: var(--ui-panel-solid);
+  color: var(--ui-muted);
+  font-size: 10px;
+  line-height: 1.6;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mem-day__body {
+  margin: 0;
+  color: var(--ui-text-2);
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mem-spin {
+  animation: mem-spin .9s linear infinite;
+}
+
+@keyframes mem-spin {
+  to { transform: rotate(360deg); }
+}

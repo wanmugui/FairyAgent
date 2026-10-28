@@ -1,0 +1,136 @@
+/* P3-4 视觉令牌层
+   这一层只定义"语义"，不出现具体色值；下面的 themes 块才落地色值。
+   好处：换肤只改 themes 块，组件样式永远不写 #hex。
+   放在 styles-fm.css 之前加载，让旧样式里的硬编码色值有更高优先级被覆盖。 */
+
+:root {
+  /* —— 表面 —— */
+  --ui-bg: #ffffff;              /* 窗口底色 */
+  --ui-surface: #ffffff;         /* 面板/列表底 */
+  --ui-surface-2: #f5f5f5;       /* 次级面：表头、输入框 */
+  --ui-surface-3: #eee;          /* 三级面：hover 前的底 */
+
+  /* —— 文字 —— */
+  --ui-text: #1f1f1f;            /* 正文 */
+  --ui-text-dim: #666;           /* 次要文字：大小、时间 */
+  --ui-text-faint: #999;         /* 占位符、禁用 */
+
+  /* —— 描边 —— */
+  --ui-border: #ddd;
+  --ui-border-strong: #bbb;
+
+  /* —— 语义色 —— */
+  --ui-accent: #1a73e8;
+  --ui-accent-hover: #1765cc;
+  --ui-accent-fg: #ffffff;
+  --ui-accent-soft: #e3f2fd;     /* 选中行的淡蓝底 */
+  --ui-danger: #d93025;
+  --ui-danger-soft: #fce8e6;
+  --ui-success: #188038;
+
+  /* —— 交互态 —— */
+  --ui-hover-bg: #f0f0f0;
+  --ui-active-bg: #e8e8e8;
+  --ui-selected-bg: var(--ui-accent-soft);
+  --ui-cursor-ring: #7aa7e8;     /* 键盘光标轮廓 */
+  --ui-drop-bg: #d7eadf;         /* 拖拽落点高亮 */
+  --ui-drop-border: var(--ui-success);
+
+  /* —— 遮罩/阴影 —— */
+  --ui-overlay: rgba(0, 0, 0, 0.2);
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.12);
+  --ui-shadow-md: 0 2px 10px rgba(0, 0, 0, 0.2);
+
+  /* —— 尺寸/间距 —— */
+  --ui-radius: 4px;
+  --ui-radius-lg: 8px;
+  --ui-row-h: 28px;              /* 桌面指针下的行高 */
+  --ui-touch-h: 44px;            /* 触摸指针下的行高，P3-7 */
+  --ui-gap: 8px;
+  --ui-checkbox: 16px;
+
+  /* —— 字体 —— */
+  --ui-font: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC',
+             'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  --ui-font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  --ui-fs: 13px;
+  --ui-fs-dim: 12px;
+
+  /* —— 动效 —— */
+  --ui-dur: 120ms;
+  --ui-ease: cubic-bezier(0.2, 0, 0.2, 1);
+
+  color-scheme: light;
+}
+
+/* 深色主题：只覆盖色值令牌，几何令牌不动 */
+:root[data-theme='dark'] {
+  --ui-bg: #16181c;
+  --ui-surface: #1e2126;
+  --ui-surface-2: #262a31;
+  --ui-surface-3: #2f343b;
+
+  --ui-text: #e6e6e6;
+  --ui-text-dim: #9aa0a6;
+  --ui-text-faint: #6b7076;
+
+  --ui-border: #343a41;
+  --ui-border-strong: #4a5158;
+
+  --ui-accent: #4c8dff;
+  --ui-accent-hover: #6ba1ff;
+  --ui-accent-fg: #0b0d10;
+  --ui-accent-soft: #1d2b45;
+  --ui-danger: #f28b82;
+  --ui-danger-soft: #3a2321;
+  --ui-success: #81c995;
+
+  --ui-hover-bg: #262a31;
+  --ui-active-bg: #2f343b;
+  --ui-cursor-ring: #6ba1ff;
+  --ui-drop-bg: #1e3327;
+  --ui-drop-border: var(--ui-success);
+
+  --ui-overlay: rgba(0, 0, 0, 0.55);
+  --ui-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.5);
+  --ui-shadow-md: 0 2px 10px rgba(0, 0, 0, 0.6);
+
+  color-scheme: dark;
+}
+
+/* P3-7 减少动效：不是把时长设成 0，而是整个不转场，
+   因为 opacity 动画在 0 时长下仍会触发一帧闪烁。 */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --ui-dur: 0ms;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* P3-7 触摸指针：行高提到 44px，勾选框放大到 20px */
+@media (pointer: coarse) {
+  :root {
+    --ui-row-h: var(--ui-touch-h);
+    --ui-checkbox: 20px;
+  }
+}
+
+/* P3-7 键盘焦点：只在键盘导航时出现轮廓。
+   :focus-visible 而不是 :focus —— 鼠标点击也亮一圈边框是很吵的。 */
+.ui-focusable:focus-visible,
+.file-item:focus-visible,
+.btn:focus-visible,
+.context-menu-item:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--ui-cursor-ring);
+  outline-offset: -2px;
+  border-radius: var(--ui-radius);
+}

@@ -1,0 +1,263 @@
+/* Usage statistics panel.
+   Uses the same CSS variables as the rest of the shell so the panel follows
+   the active theme. */
+
+.usage-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.usage-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.usage-panel-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-tx, var(--tx));
+}
+
+.usage-panel-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.usage-panel-actions select {
+  background: var(--app-panel, var(--panel));
+  color: var(--app-tx, var(--tx));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 12px;
+  min-width: 130px;
+}
+
+.usage-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--app-panel, var(--panel));
+  color: var(--app-tx2, var(--tx2));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.usage-refresh:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.usage-spin {
+  animation: usage-spin 0.9s linear infinite;
+}
+
+@keyframes usage-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Summary cards */
+
+.usage-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+
+.usage-card {
+  background: var(--app-panel, var(--panel));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.usage-card-label {
+  font-size: 12px;
+  color: var(--app-mut, var(--mut));
+  margin-bottom: 6px;
+}
+
+.usage-card-value {
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.2;
+  color: var(--app-tx, var(--tx));
+}
+
+.usage-card-hint {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--app-mut, var(--mut));
+}
+
+/* Trend chart */
+
+.usage-trend {
+  background: var(--app-panel, var(--panel));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 10px;
+  padding: 12px 14px 8px;
+}
+
+.usage-trend-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.usage-trend-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-tx, var(--tx));
+}
+
+.usage-trend-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.usage-segment {
+  display: inline-flex;
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.usage-segment button {
+  background: transparent;
+  border: 0;
+  color: var(--app-mut, var(--mut));
+  font-size: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.usage-segment button.usage-seg-active {
+  background: var(--ui-accent-soft, var(--app-line, var(--line)));
+  color: var(--ui-accent, var(--app-tx, var(--tx)));
+  font-weight: 600;
+}
+
+.usage-chart {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.usage-chart-grid {
+  stroke: var(--app-line, var(--line));
+  stroke-width: 1;
+}
+
+.usage-chart-bar {
+  fill: var(--ui-accent, #4a9eff);
+  opacity: 0.85;
+}
+
+.usage-chart-bar:hover {
+  opacity: 1;
+}
+
+.usage-chart-tick,
+.usage-chart-label {
+  fill: var(--app-mut, var(--mut));
+  font-size: 10px;
+}
+
+/* Request log */
+
+.usage-log {
+  background: var(--app-panel, var(--panel));
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.usage-log-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--app-tx, var(--tx));
+  margin-bottom: 8px;
+}
+
+.usage-log-count {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--app-mut, var(--mut));
+}
+
+.usage-table-wrap {
+  max-height: 420px;
+  overflow: auto;
+  border: 1px solid var(--app-line, var(--line));
+  border-radius: 8px;
+}
+
+.usage-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.usage-table th,
+.usage-table td {
+  padding: 6px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--app-line, var(--line));
+  white-space: nowrap;
+}
+
+.usage-table th {
+  position: sticky;
+  top: 0;
+  background: var(--app-bg, var(--bg));
+  color: var(--app-mut, var(--mut));
+  font-weight: 600;
+}
+
+.usage-table td {
+  color: var(--app-tx2, var(--tx2));
+}
+
+.usage-cell-strong {
+  color: var(--app-tx, var(--tx));
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.usage-empty {
+  padding: 26px 12px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--app-mut, var(--mut));
+}
+
+.usage-footnote {
+  font-size: 11px;
+  color: var(--app-mut, var(--mut));
+}

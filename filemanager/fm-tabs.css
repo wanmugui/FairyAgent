@@ -1,0 +1,70 @@
+/* P1-9 多标签页。全部走 tokens.css 的变量，不硬编码颜色（沿用 P3 的零硬编码约定）。 */
+
+#fm-tabs-bar {
+  flex: 0 0 auto;
+  border-bottom: 1px solid var(--ui-border);
+  background: var(--ui-bg);
+}
+
+.fm-tabs-row {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.fm-tabs-row::-webkit-scrollbar { display: none; }
+
+.fm-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+  cursor: pointer;
+  color: var(--ui-text-dim);
+  border-right: 1px solid var(--ui-border);
+  border-bottom: 2px solid transparent;
+  user-select: none;
+}
+.fm-tab:hover { background: var(--ui-hover-bg); }
+.fm-tab.active {
+  color: var(--ui-text);
+  border-bottom-color: var(--ui-accent);
+  background: var(--ui-accent-fg);
+}
+.fm-tab-name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+
+.fm-tab-close {
+  font-size: 14px;
+  line-height: 1;
+  opacity: .5;
+  padding: 0 2px;
+}
+.fm-tab-close:hover { opacity: 1; }
+
+.fm-tab-add {
+  color: var(--ui-text-dim);
+  font-weight: 600;
+  padding: 6px 12px;
+}
+
+.fm-tabs-sort {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  border-top: 1px solid var(--ui-border);
+}
+.fm-tabs-sort select,
+.fm-tabs-sort .fm-sort-dir {
+  font-size: 12px;
+  color: var(--ui-text);
+  background: var(--ui-bg);
+  border: 1px solid var(--ui-border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.fm-tabs-sort .fm-sort-dir { min-width: 28px; }

@@ -1,0 +1,265 @@
+{
+  "notes": [
+    "层 5：资产散布。地形复用层 4 的高度场（同样的参数 → 同一座山，可以直接对照）。",
+    "散布用 GN Distribute Points on Faces，密度由「坡度 × 高度」两个遮罩相乘得到；",
+    "实例随机只转 Z（保持朝上）、随机等比缩放；远景另有一套 billboard 实例，用互补密度兜底。"
+  ],
+  "output_dir": "workspace/result/layer5",
+  "terrain": {
+    "res": 192,
+    "size": 260.0,
+    "height": 62.0,
+    "octaves": 5,
+    "seed": 20261016,
+    "erosion_iters": 10,
+    "talus": 0.06,
+    "erosion_rate": 0.18,
+    "peak_cap_percentile": 99.5,
+    "despike_rel": 0.08,
+    "notes": "与层 4 完全一致的参数：同一座山，方便对比「加了树之后」。"
+  },
+  "scatter": {
+    "density_near": 0.13,
+    "density_far": 0.045,
+    "slope_reject": 0.7,
+    "slope_accept": 0.9,
+    "tree_line": 26.0,
+    "tree_line_falloff": 38.0,
+    "scale_min": 0.75,
+    "scale_max": 1.35,
+    "seed": 41,
+    "notes": [
+      "slope_reject/accept 是法线 Z 的范围（**必须先 Separate XYZ 取 Z**）。这座山的法线 Z 中位数 0.582、p90=0.887；实测 0.55/0.78 会让陡坡和尖峰上全是树（渲图实测「陡坡和尖峰密集长树」），收紧到 0.70/0.90 才形成像样的林木线。",
+      "tree_line 30 米 / falloff 44 米：雪线附近逐渐稀疏。",
+      "tree_line 26 / falloff 38：低处满树、往上渐稀、雪线以上没树（38 米 ≈ 雪线 0.84×62）。",
+      "density_near 0.055 在 260×260 的地形上约合万级实例，用 _selfcheck.json 的实化顶点数核对。",
+      "billboard_near_end 110 / far_start 150：**按到相机距离**切换。远景只放交叉双面片，近景只放真几何，两边互补；一开始两边共用同一遮罩等于铺满全场，那是名不副实的「兜底」。"
+    ],
+    "billboard_near_end": 110.0,
+    "billboard_far_start": 150.0
+  },
+  "assets": {
+    "trees": [
+      {
+        "name": "tree_a",
+        "height": 7.0,
+        "trunk_radius": 0.34,
+        "canopy": 4.2
+      },
+      {
+        "name": "tree_b",
+        "height": 9.5,
+        "trunk_radius": 0.45,
+        "canopy": 5.0
+      }
+    ],
+    "rocks": [
+      {
+        "name": "rock_a",
+        "width": 2.0,
+        "depth": 1.6,
+        "height": 1.2
+      },
+      {
+        "name": "rock_b",
+        "width": 3.0,
+        "depth": 2.4,
+        "height": 1.8
+      }
+    ],
+    "billboard": {
+      "size": 6.0,
+      "notes": "远景 billboard = 两片交叉的**六边形**树冠剪影（用方片渲出来 VLM 判为「破面片、漂浮碎片」）。真实做法是带 alpha 贴图的面片，这里用纯色剪影占位——形状与朝向验证不依赖贴图。"
+    }
+  },
+  "palette": {
+    "wall": [
+      0.86,
+      0.84,
+      0.79
+    ],
+    "wall_warm": [
+      0.93,
+      0.72,
+      0.55
+    ],
+    "roof": [
+      0.36,
+      0.34,
+      0.44
+    ],
+    "roof_warm": [
+      0.7,
+      0.3,
+      0.24
+    ],
+    "trunk": [
+      0.32,
+      0.24,
+      0.18
+    ],
+    "foliage": [
+      0.24,
+      0.55,
+      0.28
+    ],
+    "post": [
+      0.28,
+      0.26,
+      0.3
+    ],
+    "lantern": [
+      0.95,
+      0.72,
+      0.38
+    ],
+    "hedge": [
+      0.15,
+      0.27,
+      0.17
+    ],
+    "stone": [
+      0.52,
+      0.5,
+      0.47
+    ]
+  },
+  "bands": {
+    "grass_height": 0.3,
+    "rock_height": 0.62,
+    "snow_height": 0.84,
+    "noise_scale": 2.6,
+    "boundary_jitter": 7.0,
+    "grass": {
+      "color": [
+        0.3,
+        0.44,
+        0.24
+      ]
+    },
+    "rock": {
+      "color": [
+        0.33,
+        0.3,
+        0.27
+      ]
+    },
+    "snow": {
+      "color": [
+        0.92,
+        0.94,
+        0.97
+      ]
+    }
+  },
+  "checks": {
+    "max_render_seconds": 150.0,
+    "notes": [
+      "min_instances：验收要求「万级 instance」，量的是**实例数**而不是顶点数。",
+      " 实例数 = 实化顶点数 ÷ 资产平均顶点数。拿顶点数当代理量纲不对。",
+      "max_render_seconds：CPU Cycles 下这片山的渲染时间上限；散不开又渲不动等于没做。"
+    ],
+    "min_instances": 10000
+  },
+  "render": {
+    "width": 960,
+    "height": 600,
+    "samples": 48
+  },
+  "lights": [
+    {
+      "name": "Sun_Key",
+      "role": "key",
+      "energy": 3.8,
+      "kelvin": 5000,
+      "azimuth": 118.0,
+      "elevation": 26.0,
+      "angle_deg": 1.6
+    },
+    {
+      "name": "Sun_Fill",
+      "role": "fill",
+      "energy": 0.5,
+      "kelvin": 7600,
+      "azimuth": -60.0,
+      "elevation": 20.0,
+      "angle_deg": 30.0
+    }
+  ],
+  "fog": {
+    "enabled": true,
+    "density": 0.02,
+    "height_falloff": 0.045,
+    "color": [
+      0.66,
+      0.75,
+      0.93
+    ],
+    "anisotropy": 0.25,
+    "size": [
+      320.0,
+      320.0,
+      90.0
+    ],
+    "center": [
+      0.0,
+      60.0,
+      24.0
+    ]
+  },
+  "world": {
+    "strength": 0.5,
+    "color": [
+      0.44,
+      0.58,
+      0.88
+    ]
+  },
+  "layers": [
+    {
+      "name": "near",
+      "y": 0.0,
+      "mix_to_air": 0.0
+    }
+  ],
+  "camera": {
+    "location": [
+      0.0,
+      -150.0,
+      52.0
+    ],
+    "look_at": [
+      0.0,
+      25.0,
+      22.0
+    ],
+    "lens": 42.0
+  },
+  "probe": {
+    "y": -8.0,
+    "camera": [
+      [
+        0.0,
+        -26.0,
+        12.0
+      ],
+      [
+        0.0,
+        -8.0,
+        1.0
+      ]
+    ]
+  },
+  "ground": {
+    "size": [
+      220.0,
+      220.0
+    ],
+    "color": [
+      0.34,
+      0.42,
+      0.27
+    ],
+    "roughness": 0.92
+  }
+}

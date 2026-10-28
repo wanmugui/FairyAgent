@@ -1,0 +1,27 @@
+{
+  "qq": {
+    "enabled": false,
+    "model": "",
+    "apiBase": "http://127.0.0.1:8081",
+    "allowC2C": [
+      "YOUR_QQ_OPENID"
+    ],
+    "allowGroups": [],
+    "ackDelaySeconds": 8,
+    "replyChunkSize": 3500,
+    "maxPassiveReplies": 5,
+    "sendFiles": true,
+    "maxFileSizeMB": 20
+  },
+  "wechat": {
+    "enabled": false,
+    "model": "",
+    "apiBase": "http://127.0.0.1:8081",
+    "allowUsers": [
+      "YOUR_WECHAT_USER_ID@im.wechat"
+    ],
+    "ackDelaySeconds": 3,
+    "replyChunkSize": 1800,
+    "turnTimeoutSeconds": 1800
+  }
+}

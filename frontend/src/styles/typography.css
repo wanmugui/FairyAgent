@@ -1,0 +1,79 @@
+/* ============================================================
+   FANTAZIO 排版层 —— 仅作用于标题层
+   ------------------------------------------------------------
+   参考 frontend/public/fantazio-ui.html?view=type 的四角色体系，
+   只取其中两类：
+
+   serif   大标题   Georgia 900 + 负字距（-0.02em ~ -0.08em）
+   display 小标签   Arial Black 900 + 大字距（约 +0.15em）
+
+   约束（主人拍板）：
+   - 只改标题元素，正文、按钮、输入框一律不动
+   - 中文不引入字体包：拉丁走 Georgia/Arial Black，中文回落雅黑/苹方
+   - 不使用 skew 斜切装饰
+   - 不含任何 @font-face，产物体积零增长
+   - 排除 /voice 沉浸页，它保留自己的美术方向
+   ============================================================ */
+
+:root {
+  --fz-serif: Georgia, "Times New Roman", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", sans-serif;
+  --fz-display: "Arial Black", Impact, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --fz-title-ls: -0.02em;
+  --fz-kicker-ls: 0.16em;
+}
+
+/* ---- serif 角色：大标题，900 字重 + 负字距 ---- */
+html:not([data-theme='voice']) .sidebar-brand-text strong,
+html:not([data-theme='voice']) .header-copy > strong,
+html:not([data-theme='voice']) .file-panel-title,
+html:not([data-theme='voice']) .ask-modal-title,
+html:not([data-theme='voice']) .sidebar h2,
+html:not([data-theme='voice']) .reply-rendered h3,
+html:not([data-theme='voice']) .report-modal-header > span,
+html:not([data-theme='voice']) .voice-dock-modal-header > :not(button),
+/* 弹窗标题 */
+html:not([data-theme='voice']) .fairy-settings__title,
+html:not([data-theme='voice']) .fairy-section__title,
+html:not([data-theme='voice']) .fairy-subsection-title,
+html:not([data-theme='voice']) .settings-section-title,
+html:not([data-theme='voice']) .ppt-config-panel-title,
+/* 面板标题 */
+html:not([data-theme='voice']) .trace-panel-title,
+html:not([data-theme='voice']) .trace-group-title,
+html:not([data-theme='voice']) .file-tree-title,
+html:not([data-theme='voice']) .summary-card-title {
+  font-family: var(--fz-serif);
+  font-weight: 900;
+  letter-spacing: var(--fz-title-ls);
+}
+
+/* ---- display 角色：小型标签，900 字重 + 大字距 ---- */
+html:not([data-theme='voice']) .sidebar-brand-text span,
+html:not([data-theme='voice']) .header-kicker,
+html:not([data-theme='voice']) .header-telemetry-item small,
+html:not([data-theme='voice']) .settings-trigger-copy small {
+  font-family: var(--fz-display);
+  font-weight: 900;
+  letter-spacing: var(--fz-kicker-ls);
+}
+
+/* ---- 主题字体角色覆盖 ----
+   typography.css 在 zzz-skin.css 之后引入，所以它 :root 里的字体角色会
+   赢过 zzz-skin.css 里同特异度的 `html[data-theme='zzz'] …` 声明 ——
+   实测 `.fairy-section__title` 在 ZZZ 下算出来是 Georgia，正是这一条。
+
+   不去改 zzz-skin.css 的选择器，而是改**变量**：角色层统一读
+   var(--fz-serif) / var(--fz-display)，在这里按主题换掉，ZZZ 下的所有
+   标题就整体换脸，而且 p5 / base 的观感完全不受影响。
+
+   ZZZ 用 Anton（Impact 的开源复刻，窄长海报体）+ ZZZDisplayCN
+   （Noto Sans CJK SC Black 子集）——两套都是自带 webfont，不依赖本机
+   装了什么。原来的 "Arial Black", Impact 在本机一个都没有，等于让每个
+   字都先走一次回退，这正是「字体没换成功」的根因。 */
+html[data-theme='zzz'] {
+  --fz-serif: var(--zzz-display-font);
+  --fz-display: var(--zzz-display-font);
+  /* 标题原来靠负字距压紧，换成海报体后继续压会显得挤，放宽一点。 */
+  --fz-title-ls: -.012em;
+  --fz-kicker-ls: .1em;
+}

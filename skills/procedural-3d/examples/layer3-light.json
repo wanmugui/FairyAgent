@@ -1,0 +1,359 @@
+{
+  "notes": [
+    "层 3（大气与光照）的打光台。场景元素直接复用层 -1 的构件与层 2 的配色，不重写。",
+    "重点不是「把图弄好看」，而是把条目里那三项自查写成**能跑的测量**：",
+    "阴影方向 / 色相数量 / 层次分离。数字只负责提醒去看，肉眼复核仍然是必须的。",
+    "补光与轮廓光都关掉投影（use_shadow=False）——否则全场两套影子方向，",
+    "第 1 项自查会直接测出矛盾。这不是洁癖，是自查能不能成立的前提。"
+  ],
+  "output_dir": "workspace/result/layer3-light",
+  "render": {
+    "width": 960,
+    "height": 640,
+    "samples": 64,
+    "denoise": true,
+    "view_transform": "AgX",
+    "exposure": 0.0,
+    "notes": "AgX 必须显式设；exposure 0.35 是为了把中景从背景里拉出来——层 2 实测过 0 曝光时地面和天空同亮（都 160），层次全糊。"
+  },
+  "world": {
+    "strength": 0.55,
+    "color": [
+      0.42,
+      0.56,
+      0.86
+    ],
+    "notes": "冷蓝天光，负责暗部的补色。纯白会把画面洗成灰（层 1 实测）。"
+  },
+  "lights": [
+    {
+      "name": "Sun_Key",
+      "role": "key",
+      "energy": 3.4,
+      "kelvin": 5200,
+      "azimuth": 128.0,
+      "elevation": 42.0,
+      "angle_deg": 2.5,
+      "notes": "唯一投影的光。方位 128 度、俯角 42 度 -> 影子朝东南方向拉。阴影方向自查就是拿它当基准。 补光/轮廓光必须关 Cycles 的 cast_shadow，否则画面里两套影子方向，阴影自查必然 FAIL（实测）。"
+    },
+    {
+      "name": "Sun_Fill",
+      "role": "fill",
+      "energy": 0.55,
+      "kelvin": 7600,
+      "azimuth": -60.0,
+      "elevation": 18.0,
+      "angle_deg": 30.0,
+      "notes": "冷色天穹补光，能量只有主光的 1/6。补太多会把影子填平，层次分离立刻掉下去。"
+    },
+    {
+      "name": "Sun_Rim",
+      "role": "rim",
+      "energy": 0.9,
+      "kelvin": 4200,
+      "azimuth": -140.0,
+      "elevation": 12.0,
+      "angle_deg": 10.0,
+      "notes": "背侧轮廓光，把物体从背景里勾出来。HD-2D 常用的三灯逻辑：主光定方向、补光定暗部、轮廓光定分离。"
+    }
+  ],
+  "fog": {
+    "enabled": true,
+    "density": 0.028,
+    "height_falloff": 0.05,
+    "color": [
+      0.62,
+      0.72,
+      0.92
+    ],
+    "anisotropy": 0.25,
+    "size": [
+      260.0,
+      260.0,
+      80.0
+    ],
+    "center": [
+      0.0,
+      30.0,
+      26.0
+    ],
+    "notes": "极淡的一层，密度 0.006：只为让远层退后。真正的大气调参见 scene_atmosphere.py（层 4），别在两处重复调。 密度从 0.006 提到 0.014：实测 0.006 时远/近层亮度差只有 3.9 灰度级（判据 6.0，FAIL），雾等于没起作用。"
+  },
+  "ground": {
+    "size": [
+      220.0,
+      220.0
+    ],
+    "color": [
+      0.34,
+      0.42,
+      0.27
+    ],
+    "roughness": 0.92
+  },
+  "layers": [
+    {
+      "name": "far",
+      "y": 40.0,
+      "mix_to_air": 0.55
+    },
+    {
+      "name": "mid",
+      "y": 18.0,
+      "mix_to_air": 0.18
+    },
+    {
+      "name": "near",
+      "y": 2.0,
+      "mix_to_air": 0.0
+    }
+  ],
+  "palette": {
+    "wall": [
+      0.86,
+      0.84,
+      0.79
+    ],
+    "wall_warm": [
+      0.93,
+      0.72,
+      0.55
+    ],
+    "roof": [
+      0.36,
+      0.34,
+      0.44
+    ],
+    "roof_warm": [
+      0.7,
+      0.3,
+      0.24
+    ],
+    "trunk": [
+      0.32,
+      0.24,
+      0.18
+    ],
+    "foliage": [
+      0.24,
+      0.55,
+      0.28
+    ],
+    "post": [
+      0.28,
+      0.26,
+      0.3
+    ],
+    "lantern": [
+      0.95,
+      0.72,
+      0.38
+    ],
+    "hedge": [
+      0.15,
+      0.27,
+      0.17
+    ],
+    "stone": [
+      0.52,
+      0.5,
+      0.47
+    ]
+  },
+  "camera": {
+    "location": [
+      0.0,
+      -34.0,
+      13.0
+    ],
+    "look_at": [
+      0.0,
+      14.0,
+      3.5
+    ],
+    "lens": 45.0,
+    "notes": "45mm 在 35~85 区间内，不畸变。俯角约 16 度：再陡地面就压成一条线。"
+  },
+  "checks": {
+    "shadow_delta": 12.0,
+    "shadow_tolerance_deg": 25.0,
+    "hue_min_sat": 0.12,
+    "hue_min_val": 0.18,
+    "hue_min_clusters": 3,
+    "hue_max_top": 0.85,
+    "layer_min_delta": 6.0,
+    "notes": [
+      "shadow_delta：影子比地面暗多少才算影子（0~255 灰度）。",
+      "shadow_tolerance_deg：反推方位与主光方位+180 的允许偏差。25 度是因为影子边缘有半影，不要求像素级精确。",
+      "hue_min_sat / hue_min_val：过滤掉灰白像素，否则整张图的「色相数量」会被近白像素污染成 12 个色相全满。",
+      "hue_min_clusters=3：至少三种可辨色相。hue_max_top=0.85：单一色相不许占到 85%，那是「一色到底」。",
+      "layer_min_delta：相邻深度带的平均亮度差下限（灰度级）。层 2 实测全图挤在 148~160 时，层间差只有 1~2 级，糊成一片。",
+      "layer_mono_slack：允许的亮度非单调容差（灰度级）。要求远层不比近层暗太多，否则说明雾把远近关系弄反了。",
+      "shadow_diff_delta：差分法阈值——关掉主光后变亮超过这么多灰度级的像素，算作主光造成的投影。",
+      "thumb_min_fg_ratio / thumb_min_quad_edge：缩略图可读性判据（结构占比 + 四象限都有边缘），与全尺寸的层次分离是两回事，不要混用。",
+      "fog_min_desat：雾后全图饱和度至少下降这么多。**别用「抬暗部」当判据**——实测密度 0.010 净提亮(+4.3 级)、0.060 净压暗(-15 级)，假设错了会一直假 FAIL；可靠签名是降饱和 + 建立远近次序。"
+    ],
+    "layer_mono_slack": 3.0,
+    "shadow_diff_delta": 3.0,
+    "shadow_max_iou": 0.35,
+    "thumb_min_fg_ratio": 0.03,
+    "thumb_min_quad_edge": 20.0,
+    "fog_min_desat": 0.01
+  },
+  "elements": [
+    {
+      "name": "far_house_a",
+      "layer": "far",
+      "kind": "building",
+      "x": -20.0,
+      "y": 40.0,
+      "width": 7.0,
+      "depth": 5.0,
+      "height": 8.5,
+      "roof": 2.6,
+      "wall": "wall",
+      "roof_color": "roof"
+    },
+    {
+      "name": "far_house_b",
+      "layer": "far",
+      "kind": "building",
+      "x": 4.0,
+      "y": 40.0,
+      "width": 6.0,
+      "depth": 5.0,
+      "height": 7.0,
+      "roof": 2.2,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "far_tree",
+      "layer": "far",
+      "kind": "tree",
+      "x": 22.0,
+      "y": 40.0,
+      "height": 9.5,
+      "trunk_radius": 0.45,
+      "canopy": 5.0
+    },
+    {
+      "name": "mid_house",
+      "layer": "mid",
+      "kind": "building",
+      "x": -11.0,
+      "y": 18.0,
+      "width": 8.5,
+      "depth": 6.0,
+      "height": 10.0,
+      "roof": 3.0,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "mid_tree_a",
+      "layer": "mid",
+      "kind": "tree",
+      "x": 3.0,
+      "y": 18.0,
+      "height": 8.0,
+      "trunk_radius": 0.42,
+      "canopy": 4.6
+    },
+    {
+      "name": "mid_tree_b",
+      "layer": "mid",
+      "kind": "tree",
+      "x": 17.0,
+      "y": 18.0,
+      "height": 6.8,
+      "trunk_radius": 0.34,
+      "canopy": 3.9
+    },
+    {
+      "name": "mid_lamp",
+      "layer": "mid",
+      "kind": "lantern",
+      "x": -20.0,
+      "y": 18.0,
+      "height": 4.2,
+      "post_radius": 0.14
+    },
+    {
+      "name": "near_house",
+      "layer": "near",
+      "kind": "building",
+      "x": -15.0,
+      "y": 2.0,
+      "width": 10.0,
+      "depth": 7.0,
+      "height": 11.0,
+      "roof": 3.6,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "near_tree",
+      "layer": "near",
+      "kind": "tree",
+      "x": 7.0,
+      "y": 2.0,
+      "height": 11.5,
+      "trunk_radius": 0.6,
+      "canopy": 6.2
+    },
+    {
+      "name": "near_rock",
+      "layer": "near",
+      "kind": "rock",
+      "x": 18.0,
+      "y": 2.0,
+      "width": 2.6,
+      "depth": 2.0,
+      "height": 1.7,
+      "color": "stone"
+    },
+    {
+      "name": "near_grass",
+      "layer": "near",
+      "kind": "grass",
+      "x": 0.0,
+      "y": 2.0,
+      "width": 1.4,
+      "height": 0.8,
+      "tilt": 20,
+      "blades": 5
+    },
+    {
+      "name": "near_hedge",
+      "layer": "near",
+      "kind": "block",
+      "x": 26.0,
+      "y": 2.0,
+      "width": 7.0,
+      "depth": 2.2,
+      "height": 2.0,
+      "color": "hedge"
+    }
+  ],
+  "probe": {
+    "y": -8.0,
+    "camera": [
+      [
+        0.0,
+        -26.0,
+        12.0
+      ],
+      [
+        0.0,
+        -8.0,
+        1.0
+      ]
+    ],
+    "notes": "影子探针放在相机与场景之间的空地上，孤立一个立方体当投影者；用树当投影者时影子被树冠盖住，质心带偏 37 度。"
+  },
+  "air_density_sweep": {
+    "notes": "地面+单灯，密度扫描实测（用于定 fog 判据，不是调参目标）：0.0→mean157.3/sat0.112；0.010→161.6/0.059；0.028→155.7/0.042；0.060→142.0/0.086。",
+    "reading": "低密度净提亮、高密度净压暗：直射光衰减与内散射谁占上风取决于密度；饱和度单调下降，是稳定的大气透视签名。"
+  }
+}

@@ -1,0 +1,135 @@
+{
+  "notes": [
+    "层 2（元素建模批处理）的参数清单：一份元素规格 → N 个 glb + 每件一张预览渲图。",
+    "与层 1 的 elements-example.json **是同一批元素**（树/岩/屋/草/灯），",
+    "层 1 出三视图、层 2 出网格，两份清单的 name 逐字一致，便于对账。",
+    "尺寸单位是米，1 单位 = 1 米，脚本不做隐式缩放；每个元素局部原点在底面中心。",
+    "面数预算是自定的（层 4/6 才谈引擎预算）：这里每个都远低于 6000 tris 的教程要求。"
+  ],
+  "output_dir": "workspace/result/props-batch",
+  "layer": {
+    "name": "mid",
+    "y": 0.0,
+    "mix_to_air": 0.0,
+    "notes": "单件建模不该带空气透视混色，取 0。"
+  },
+  "air_color": [
+    0.68,
+    0.78,
+    0.95
+  ],
+  "palette": {
+    "wall": [
+      0.86,
+      0.84,
+      0.79
+    ],
+    "wall_warm": [
+      0.9,
+      0.78,
+      0.68
+    ],
+    "roof": [
+      0.36,
+      0.34,
+      0.44
+    ],
+    "roof_warm": [
+      0.62,
+      0.34,
+      0.3
+    ],
+    "trunk": [
+      0.32,
+      0.24,
+      0.18
+    ],
+    "foliage": [
+      0.3,
+      0.52,
+      0.32
+    ],
+    "post": [
+      0.28,
+      0.26,
+      0.3
+    ],
+    "lantern": [
+      0.95,
+      0.72,
+      0.38
+    ],
+    "hedge": [
+      0.22,
+      0.36,
+      0.24
+    ],
+    "stone": [
+      0.52,
+      0.5,
+      0.47
+    ],
+    "notes": "与层 -1 同一套色。石头单独给 stone 色，不复用 wall（否则和房子糊成一片）。"
+  },
+  "render": {
+    "samples": 24,
+    "width": 420,
+    "height": 420,
+    "notes": "预览图只要看清形体，420px / 24 采样足够，整批十几秒。view_transform 用 Standard 而不是 AgX：预览要看的是本色，不是电影感。"
+  },
+  "elements": [
+    {
+      "name": "el_tree_oak",
+      "kind": "tree",
+      "height": 9.0,
+      "trunk_radius": 0.55,
+      "canopy": 6.0,
+      "notes": "层 1 三视图里的那棵橡树。半径 6 的树冠配 9 高，比例接近真实阔叶树。"
+    },
+    {
+      "name": "el_tree_pine",
+      "kind": "tree",
+      "height": 12.0,
+      "trunk_radius": 0.45,
+      "canopy": 4.6,
+      "notes": "松树：比橡树高、冠窄，同一构件不同参数就成立——这正是批处理要复用的东西。"
+    },
+    {
+      "name": "el_rock_boulder",
+      "kind": "rock",
+      "width": 2.6,
+      "depth": 2.0,
+      "height": 1.8,
+      "color": "stone",
+      "notes": "石头没有对应构件：用 block 拉扁当块石。倒角与切面属层 2 的后续活，这里先保证有可实例化的体块。"
+    },
+    {
+      "name": "el_house_small",
+      "kind": "building",
+      "width": 8.0,
+      "depth": 6.0,
+      "height": 6.5,
+      "roof": 3.2,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm",
+      "notes": "小屋：墙身 + 四棱锥屋顶，出檐 1.12 倍。"
+    },
+    {
+      "name": "el_lamp_post",
+      "kind": "lantern",
+      "height": 4.2,
+      "post_radius": 0.14,
+      "notes": "路灯：柱 + 灯箱。层 1 三视图里最容易失败的那件，先在建模侧确认它本身没问题。"
+    },
+    {
+      "name": "el_grass_tuft",
+      "kind": "grass",
+      "width": 1.2,
+      "depth": 1.1,
+      "height": 0.75,
+      "notes": "草丛：四片交叉薄叶（之前用矮方块占位，渲图实测就是个绿方块，不算资产）。",
+      "blades": 4,
+      "tilt": 20
+    }
+  ]
+}

@@ -1,0 +1,381 @@
+{
+  "notes": [
+    "层 3b：《四、惊人杠杆》里能在本机验的四项（HDRI+Sun / Mist Pass 调色 / Glare 辉光 / Camera Shift 移轴）",
+    "外加树冠与树干的观感修正。每项都做成**成对对照**，用客观数字判定，最后再人眼看。",
+    "HDRI 素材：Poly Haven aarfontein_dawn_2 1k，取法与 md5 核对见 references/hdri.md。"
+  ],
+  "output_dir": "workspace/result/layer3b",
+  "hdri_path": "workspace/result/hdri/aarfontein_dawn_2_1k.hdr",
+  "hdri": {
+    "world_strength": 0.75,
+    "notes": "HDRI 只当环境光；方向光仍用太阳灯。强度 0.75 是为了让 HDRI 压不过太阳，高光才不会全糊。"
+  },
+  "render": {
+    "width": 640,
+    "height": 427,
+    "samples": 48,
+    "notes": "对照实验要成对渲，尺寸压小一点省时间；48 采样在这个尺寸上够用。"
+  },
+  "mist_grade": {
+    "cool_color": [
+      0.42,
+      0.58,
+      0.95,
+      1.0
+    ],
+    "min_hue_shift": 1.0,
+    "far_box": [
+      40,
+      30,
+      600,
+      150
+    ],
+    "notes": "Mist Pass 驱动混合系数：越远混得越多。判据是远景区域平均色相必须真的变化，否则等于没接合成器。far_box 取画面上部（远景所在）。"
+  },
+  "glare": {
+    "threshold": 0.5,
+    "size": 7,
+    "strength": 2.2,
+    "box": [
+      0,
+      0,
+      640,
+      427
+    ],
+    "notes": "Fog Glow。**Threshold 是线性场景值不是显示值**：设 0.9 时整张图（AgX 后显示值只有 0.6~0.7）都达不到阈值，Glare 输出恒等于 0，两张图**逐像素完全相同**——这种「接了等于没接」的失败最隐蔽。",
+    "material": "mid_lantern",
+    "emission_strength": 8.0,
+    "min_max_diff": 8.0,
+    "min_mean_diff": 0.5
+  },
+  "camera_shift": {
+    "shift_y": 0.25,
+    "max_matrix_err": 1e-06,
+    "min_row_shift_px": 20,
+    "notes": "判据用「投影矩阵的数学不变量 + 行剖面互相关」，两个都不受画面内容影响。\n  踩过的坑：① 用地平线倾斜——检测算法本身坏的（不移轴也测出 116px 倾斜）；\n  ② 用整幅前景掩码质心——移轴会换掉画面内容，量到的是「换了个取景」，实测 x 漂移在 0.0047~0.0194 横跳；\n  ③ 插红杆量屏幕位置——杆子被雾洗成灰粉挑不出像素，越修越重。",
+    "matrix_note": "矩阵不变量只放过 [1][3] 也不行——Blender 的 shift 同时改竖向缩放项 [1][1]，实测误差 0.2。正确是竖直那一整行（第 1 行）放行，其余 12 个元素必须仍是单位矩阵。",
+    "expect_basis": "shift_y × 画幅较大边（sensor fit AUTO，取宽度 640）→ 0.25×640=160px；拿高度算会得到 106.75，那是基准搞错了。"
+  },
+  "crown": {
+    "base_factor": 0.34,
+    "notes": "树冠锥体底面高度 = height × base_factor。默认 0.42 只比树干顶（0.5h）低 0.08h，渲出来像树冠悬空；压到 0.34 加强相交。**几何相交不等于看起来连着，最后要看图。**"
+  },
+  "closeup": {
+    "tree": "near_tree",
+    "notes": "树冠对照的特写机位就打在这棵树上，不然整场景里看不清冠干接缝。"
+  },
+  "lights": [
+    {
+      "name": "Sun_Key",
+      "role": "key",
+      "energy": 3.4,
+      "kelvin": 5200,
+      "azimuth": 128.0,
+      "elevation": 42.0,
+      "angle_deg": 2.5
+    },
+    {
+      "name": "Sun_Fill",
+      "role": "fill",
+      "energy": 0.55,
+      "kelvin": 7600,
+      "azimuth": -60.0,
+      "elevation": 18.0,
+      "angle_deg": 30.0
+    },
+    {
+      "name": "Sun_Rim",
+      "role": "rim",
+      "energy": 0.9,
+      "kelvin": 4200,
+      "azimuth": -140.0,
+      "elevation": 12.0,
+      "angle_deg": 10.0,
+      "notes": "轮廓光。树冠观感问题多半就是它造成的——冠干之间被勾出一道亮边，看着像脱开。做对照时保持不变，才能隔离变量。"
+    }
+  ],
+  "fog": {
+    "enabled": true,
+    "density": 0.028,
+    "height_falloff": 0.05,
+    "color": [
+      0.62,
+      0.72,
+      0.92
+    ],
+    "anisotropy": 0.25,
+    "size": [
+      260.0,
+      260.0,
+      80.0
+    ],
+    "center": [
+      0.0,
+      30.0,
+      26.0
+    ]
+  },
+  "world": {
+    "strength": 0.55,
+    "color": [
+      0.42,
+      0.56,
+      0.86
+    ]
+  },
+  "layers": [
+    {
+      "name": "far",
+      "y": 40.0,
+      "mix_to_air": 0.55
+    },
+    {
+      "name": "mid",
+      "y": 18.0,
+      "mix_to_air": 0.18
+    },
+    {
+      "name": "near",
+      "y": 2.0,
+      "mix_to_air": 0.0
+    }
+  ],
+  "palette": {
+    "wall": [
+      0.86,
+      0.84,
+      0.79
+    ],
+    "wall_warm": [
+      0.93,
+      0.72,
+      0.55
+    ],
+    "roof": [
+      0.36,
+      0.34,
+      0.44
+    ],
+    "roof_warm": [
+      0.7,
+      0.3,
+      0.24
+    ],
+    "trunk": [
+      0.32,
+      0.24,
+      0.18
+    ],
+    "foliage": [
+      0.24,
+      0.55,
+      0.28
+    ],
+    "post": [
+      0.28,
+      0.26,
+      0.3
+    ],
+    "lantern": [
+      0.95,
+      0.72,
+      0.38
+    ],
+    "hedge": [
+      0.15,
+      0.27,
+      0.17
+    ],
+    "stone": [
+      0.52,
+      0.5,
+      0.47
+    ]
+  },
+  "camera": {
+    "location": [
+      0.0,
+      -34.0,
+      13.0
+    ],
+    "look_at": [
+      0.0,
+      14.0,
+      3.5
+    ],
+    "lens": 45.0
+  },
+  "elements": [
+    {
+      "name": "far_house_a",
+      "layer": "far",
+      "kind": "building",
+      "x": -20.0,
+      "y": 40.0,
+      "width": 7.0,
+      "depth": 5.0,
+      "height": 8.5,
+      "roof": 2.6,
+      "wall": "wall",
+      "roof_color": "roof"
+    },
+    {
+      "name": "far_house_b",
+      "layer": "far",
+      "kind": "building",
+      "x": 4.0,
+      "y": 40.0,
+      "width": 6.0,
+      "depth": 5.0,
+      "height": 7.0,
+      "roof": 2.2,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "far_tree",
+      "layer": "far",
+      "kind": "tree",
+      "x": 22.0,
+      "y": 40.0,
+      "height": 9.5,
+      "trunk_radius": 0.45,
+      "canopy": 5.0
+    },
+    {
+      "name": "mid_house",
+      "layer": "mid",
+      "kind": "building",
+      "x": -11.0,
+      "y": 18.0,
+      "width": 8.5,
+      "depth": 6.0,
+      "height": 10.0,
+      "roof": 3.0,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "mid_tree_a",
+      "layer": "mid",
+      "kind": "tree",
+      "x": 3.0,
+      "y": 18.0,
+      "height": 8.0,
+      "trunk_radius": 0.42,
+      "canopy": 4.6
+    },
+    {
+      "name": "mid_tree_b",
+      "layer": "mid",
+      "kind": "tree",
+      "x": 17.0,
+      "y": 18.0,
+      "height": 6.8,
+      "trunk_radius": 0.34,
+      "canopy": 3.9
+    },
+    {
+      "name": "mid_lamp",
+      "layer": "mid",
+      "kind": "lantern",
+      "x": -20.0,
+      "y": 18.0,
+      "height": 4.2,
+      "post_radius": 0.14
+    },
+    {
+      "name": "near_house",
+      "layer": "near",
+      "kind": "building",
+      "x": -15.0,
+      "y": 2.0,
+      "width": 10.0,
+      "depth": 7.0,
+      "height": 11.0,
+      "roof": 3.6,
+      "wall": "wall_warm",
+      "roof_color": "roof_warm"
+    },
+    {
+      "name": "near_tree",
+      "layer": "near",
+      "kind": "tree",
+      "x": 7.0,
+      "y": 2.0,
+      "height": 11.5,
+      "trunk_radius": 0.6,
+      "canopy": 6.2
+    },
+    {
+      "name": "near_rock",
+      "layer": "near",
+      "kind": "rock",
+      "x": 18.0,
+      "y": 2.0,
+      "width": 2.6,
+      "depth": 2.0,
+      "height": 1.7,
+      "color": "stone"
+    },
+    {
+      "name": "near_grass",
+      "layer": "near",
+      "kind": "grass",
+      "x": 0.0,
+      "y": 2.0,
+      "width": 1.4,
+      "height": 0.8,
+      "tilt": 20,
+      "blades": 5
+    },
+    {
+      "name": "near_hedge",
+      "layer": "near",
+      "kind": "block",
+      "x": 26.0,
+      "y": 2.0,
+      "width": 7.0,
+      "depth": 2.2,
+      "height": 2.0,
+      "color": "hedge"
+    }
+  ],
+  "ground": {
+    "size": [
+      220.0,
+      220.0
+    ],
+    "color": [
+      0.34,
+      0.42,
+      0.27
+    ],
+    "roughness": 0.92
+  },
+  "probe": {
+    "y": -8.0,
+    "camera": [
+      [
+        0.0,
+        -26.0,
+        12.0
+      ],
+      [
+        0.0,
+        -8.0,
+        1.0
+      ]
+    ]
+  },
+  "checks": {
+    "shadow_delta": 12.0,
+    "shadow_diff_delta": 3.0,
+    "hue_min_sat": 0.12,
+    "hue_min_val": 0.18,
+    "hue_min_clusters": 3,
+    "hue_max_top": 0.85,
+    "layer_min_delta": 6.0,
+    "layer_mono_slack": 3.0
+  }
+}

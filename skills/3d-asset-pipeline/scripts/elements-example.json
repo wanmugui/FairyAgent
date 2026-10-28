@@ -1,0 +1,57 @@
+{
+  "notes": [
+    "threeview.py --list 的元素清单示例：一次调用出 6 个不同场景元素的三视图。",
+    "对应教程《HD-2D场景搭建/批量生图提示词.txt》的「分解参考图」与",
+    "《HD-3D场景生成/模型生成提示词.txt》的「分解三视图」两段——都是一份清单 → 逐个元素出图。",
+    "关键点：styles 按 kind 分组。默认 style 写死「anime game character … full body」，",
+    "拿它出树/岩石/建筑会稳定出成人形，所以每个 kind 都要有自己的 style。",
+    "kind 还决定用哪套措辞与视图：character → front/side/back；其余 → 正交 front/side/top。",
+    "速率：--sleep 控制元素间隔（默认 5 秒），别设 0。",
+    "attempts 定 3：实测同一元素单次成功不稳（同一份提示词跑两轮，岩石一次 3 段一次 2 段），重试是独立采样，比调提示词更管用。"
+  ],
+  "defaults": {
+    "ratio": "16:9",
+    "model": "image-01",
+    "attempts": 3
+  },
+  "styles": {
+    "character": "anime game character, cel shaded, full body, no background props",
+    "tree": "stylized low-poly game asset, a single deciduous tree, clean readable silhouette, flat cel shaded colors, no grass, no rocks, no extra objects",
+    "rock": "stylized low-poly game asset, a single weathered boulder, chunky faceted surfaces, flat cel shaded colors, no grass, no extra objects",
+    "building": "stylized low-poly game asset, a small single-story house with a pitched roof and one door, flat cel shaded colors, no fence, no trees, no extra objects",
+    "grass": "stylized low-poly game asset, a single small tuft of grass, flat cel shaded green, nothing else in frame",
+    "lamp": "stylized low-poly game asset, a single old street lamp post with a round lantern head, flat cel shaded colors, nothing else in frame"
+  },
+  "elements": [
+    {
+      "name": "el_tree_oak",
+      "kind": "tree",
+      "desc": "A medium-sized deciduous oak tree with a rounded crown and a short thick trunk"
+    },
+    {
+      "name": "el_rock_boulder",
+      "kind": "rock",
+      "desc": "A single rounded granite boulder about one meter wide, sitting flat on the ground"
+    },
+    {
+      "name": "el_house_small",
+      "kind": "building",
+      "desc": "A small single-story cottage with a steep red pitched roof, white plaster walls, one wooden door and two square windows"
+    },
+    {
+      "name": "el_grass_tuft",
+      "kind": "grass",
+      "desc": "One small tuft of grass with about seven blades, low to the ground"
+    },
+    {
+      "name": "el_lamp_post",
+      "kind": "lamp",
+      "desc": "A slender cast-iron street lamp post with a single round lantern at the top"
+    },
+    {
+      "name": "el_tree_pine",
+      "kind": "tree",
+      "desc": "A tall conifer pine tree with layered needle tiers and a straight trunk"
+    }
+  ]
+}

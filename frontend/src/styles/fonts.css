@@ -1,0 +1,74 @@
+/* ============================================================
+   全局字体声明
+   ------------------------------------------------------------
+   修正记录：
+   - 原来这里声明了 3 个 @font-face，url 全部写成 /fonts/fonts/X，
+     但文件实际在 public/fonts/X（多了一层 fonts/），且其中
+     AlibabaPuHuiTi-Bold.woff2 这个文件名根本不存在（实际叫
+     AliMamaShuHeiBold.woff2）。请求返回 200 但 content-type 是
+     text/html —— 那是 Vite 的 index.html 回退页，浏览器拿 HTML
+     当字体解析失败，@font-face 静默失效。
+     这就是「字体样式变一下又变回去」的根因：webfont 加载失败 →
+     回退系统字体 → 加载完成 → 又变回。
+   - 'Alibaba PuHuiTi' 这个字族全项目无人使用（各处用的都是
+     'AliMamaShuHei'，由 p5-skin.css 正确注册），故移除。
+   ============================================================ */
+
+/* Bungee —— 展示字，街区/漫画风。ZZZ 走带大字与侧边栏标题都用它。 */
+@font-face {
+  font-family: 'Bungee';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/Bungee.woff2') format('woff2');
+}
+
+/* Anton —— Impact 风格的开源替代（OFL，可商用）。
+   Impact 是系统字体、不能随产品分发，而且本机（Linux）根本没装，
+   放進字體棧等於讓每個字都先走一次回退 —— 這就是「動畫條字體變了」的
+   真兇。Anton 是 Impact 最忠實的開源復刻：窄長、超粗、筆畫末端平切，
+   海報體的氣質完全一致，而且自帶 webfont，哪台機器都一樣。 */
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/fonts/anton-latin.woff2') format('woff2');
+}
+
+/* ZZZ 中文展示字（Noto Sans CJK SC Black 子集）。
+   ------------------------------------------------------------
+   原来的 'AliMamaShuHei' 是个 956 字节的残件：请求成功、文件头也是
+   合法的 woff2，但里面没有可用字形，浏览器 document.fonts.check()
+   直接判假，所有中文展示字静默回退到系统默认体 —— 这就是「字体不帅、
+   样式变廉价」的真正原因。旧版靠 "Microsoft YaHei" / "Arial Black"
+   在 Windows 上恰好命中，换到本机就全塌了。
+
+   这里改为自带一份真正可用的子集字体，中英文都不再依赖本机装了什么。
+   生成脚本：frontend/public/fonts/build_display_font.py */
+@font-face {
+  font-family: 'ZZZDisplayCN';
+  font-style: normal;
+  font-weight: 900;
+  font-display: swap;
+  src: url('/fonts/zzz-display-cn.woff2') format('woff2');
+}
+
+/* ZZZ 展示字体栈。
+   顺序是有意的：先 Anton（Impact 风格的海报体，主人点名要的那种），
+   再中文超粗黑（ZZZDisplayCN，自带，必定命中），最后才是本机字体兜底。
+   不再把 Impact / Arial Black 放在前面 —— 本机没有这两款，
+   放前面等于让每个字都先走一次回退。 */
+:root {
+  --zzz-display-font: 'Anton', 'ZZZDisplayCN', 'Noto Sans CJK SC Black',
+    'Source Han Sans SC Heavy', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  /* 中文专用的展示栈：Anton 没有中文字形，中英混排时若整段用上面的栈，
+     中文会逐字回退，字重忽粗忽细。纯中文标题直接用这一条。 */
+  --zzz-display-font-cn: 'ZZZDisplayCN', 'Noto Sans CJK SC Black',
+    'Source Han Sans SC Heavy', 'Microsoft YaHei', 'PingFang SC', sans-serif;
+  /* 等宽栈：铭牌、编号、时间戳这类「设备上的喷码」用。
+     旧的 ui-monospace 栈在 Windows 上会落到没有中文的 Consolas，
+     中文直接变成方框。补上中文等宽兜底。 */
+  --zzz-mono-font: ui-monospace, 'Cascadia Code', Consolas,
+    'Noto Sans Mono CJK SC', 'Sarasa Mono SC', 'Microsoft YaHei', monospace;
+}

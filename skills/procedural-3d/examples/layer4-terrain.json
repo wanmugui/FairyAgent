@@ -1,0 +1,172 @@
+{
+  "notes": [
+    "层 4：地形 + 材质分层。高度场在 numpy 里算（需要逐像素迭代的热侵蚀），",
+    "材质分层在 GN 节点里做（ColorRamp + MixShader + Noise），分工是刻意的，理由见脚本头注释。",
+    "验收原文：渲一张山景，山脊锐利可辨、分层边界不呆板 —— 这两句各自对应一个可测量的数。"
+  ],
+  "output_dir": "workspace/result/layer4",
+  "terrain": {
+    "res": 192,
+    "size": 260.0,
+    "height": 62.0,
+    "octaves": 5,
+    "seed": 20261016,
+    "erosion_iters": 10,
+    "talus": 0.06,
+    "erosion_rate": 0.18,
+    "notes": "res 192；octaves 5（7 层时高频留下细针状单峰，渲图像异常几何体）；erosion_rate 0.18/10 轮（0.35×14 会在物质堆积处长出尖刺）；peak_cap_percentile 99.6 削掉残余离群尖点——**用削顶不用平滑**，平滑会把山磨圆。",
+    "peak_cap_percentile": 99.6,
+    "despike_rel": 0.08
+  },
+  "bands": {
+    "grass_height": 0.3,
+    "rock_height": 0.62,
+    "snow_height": 0.84,
+    "noise_scale": 2.6,
+    "boundary_jitter": 7.0,
+    "grass": {
+      "color": [
+        0.3,
+        0.44,
+        0.24
+      ]
+    },
+    "rock": {
+      "color": [
+        0.33,
+        0.3,
+        0.27
+      ]
+    },
+    "snow": {
+      "color": [
+        0.92,
+        0.94,
+        0.97
+      ]
+    },
+    "notes": [
+      "ColorRamp 三段：0.80 以上雪线、0.62~0.80 岩、0.30~0.62 草、以下雪白过渡。",
+      "boundary_jitter=7.0 米：噪声加在送进 ColorRamp 的高度上，边界因此起伏。",
+      "调 0 的话分层线会是一条水平直线——那就是「呆板」的样子，可以渲一张对照看看。",
+      "rock 压深到 0.33/0.30/0.27、snow_height 提到 0.84：渲图实测「岩石色与顶部浅青接近、雪覆盖过广」，对比不够。"
+    ]
+  },
+  "render": {
+    "width": 960,
+    "height": 600,
+    "samples": 64,
+    "notes": "地形要看得清边缘，采样不能太低。"
+  },
+  "checks": {
+    "min_steep_ratio": 0.2,
+    "min_boundary_std": 3.0,
+    "thumb_min_std": 12.0,
+    "notes": [
+      "min_steep_ratio：坡度超过 75 分位的像素占比下限。山脊锐利 = 有相当比例的像素处在陡坡上；",
+      "  被过度平滑的圆山这个数会很低。",
+      "min_boundary_std：分层交界在行方向上的高度标准差。水平直线 = 0 = 呆板。",
+      "thumb_min_std：200px 缩略图的亮度标准差下限，防止缩完糊成一片。"
+    ]
+  },
+  "lights": [
+    {
+      "name": "Sun_Key",
+      "role": "key",
+      "energy": 3.8,
+      "kelvin": 5000,
+      "azimuth": 118.0,
+      "elevation": 26.0,
+      "angle_deg": 1.6,
+      "notes": "低角度主光是山脊锐利的另一半——顶光会把山拍平。26 度接近黄金时刻。"
+    },
+    {
+      "name": "Sun_Fill",
+      "role": "fill",
+      "energy": 0.5,
+      "kelvin": 7600,
+      "azimuth": -60.0,
+      "elevation": 20.0,
+      "angle_deg": 30.0
+    }
+  ],
+  "fog": {
+    "enabled": true,
+    "density": 0.02,
+    "height_falloff": 0.045,
+    "color": [
+      0.66,
+      0.75,
+      0.93
+    ],
+    "anisotropy": 0.25,
+    "size": [
+      320.0,
+      320.0,
+      90.0
+    ],
+    "center": [
+      0.0,
+      60.0,
+      24.0
+    ],
+    "notes": "高度衰减比层 3 更强（0.045），山脚的雾要浓、山顶要透。"
+  },
+  "world": {
+    "strength": 0.5,
+    "color": [
+      0.44,
+      0.58,
+      0.88
+    ]
+  },
+  "layers": [
+    {
+      "name": "near",
+      "y": 0.0,
+      "mix_to_air": 0.0
+    }
+  ],
+  "palette": {},
+  "camera": {
+    "location": [
+      0.0,
+      -150.0,
+      52.0
+    ],
+    "look_at": [
+      0.0,
+      25.0,
+      22.0
+    ],
+    "lens": 42.0,
+    "notes": "站远、低机位，山才有体量。42mm 避免广角把脊线拉弯。"
+  },
+  "probe": {
+    "y": -8.0,
+    "camera": [
+      [
+        0.0,
+        -26.0,
+        12.0
+      ],
+      [
+        0.0,
+        -8.0,
+        1.0
+      ]
+    ]
+  },
+  "ground": {
+    "size": [
+      220.0,
+      220.0
+    ],
+    "color": [
+      0.34,
+      0.42,
+      0.27
+    ],
+    "roughness": 0.92
+  }
+}
