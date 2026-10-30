@@ -45,7 +45,7 @@ node --check frontend\server.cjs
 
 ## 4. Prompt
 
-Prompt 源文件：`config/system/parts/**`、`config/system/zh.md`、`config/tools/schemas.json`。
+Prompt 与工具 Schema 由受保护的运行时资源包提供；改动对应源文件后重新生成并校验。
 
 ```powershell
 pnpm prompt:build

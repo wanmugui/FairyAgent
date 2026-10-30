@@ -460,40 +460,7 @@ workspace/result/computer-screenshots/
 
 ## Prompt 与工具 Schema
 
-主 system prompt 与按需模块现在分开维护：
-
-```text
-config/
-├─ system/
-│  ├─ manifest.yml
-│  ├─ zh.md                    # 构建产物
-│  └─ parts/
-│     └─ zh/
-│        ├─ 01_contract.md
-│        ├─ 02_resources.md
-│        ├─ 03_context.md
-│        ├─ 04_execution.md
-│        ├─ 05_memory.md
-│        ├─ 06_delivery.md
-│        └─ 07_thinking.md
-└─ modules/
-   ├─ date_memory/
-   ├─ finalize/
-   ├─ generate_title/
-   ├─ mem_agent/
-   ├─ reflection/
-   ├─ subtask/
-   └─ summary/
-```
-
-私仓维护时保留可编辑的明文源文件，构建与检查：
-
-```bash
-pnpm prompt:build
-pnpm prompt:check
-```
-
-公仓发布时，系统 Prompt、按需 Prompt 与 `config/tools/schemas.json` 会合并为：
+系统 Prompt、按需 Prompt 与工具 Schema 统一打包为受保护的运行时资源包，随安装包分发：
 
 ```text
 config/protected/core.bundle
@@ -501,15 +468,7 @@ config/protected/core.bundle
 
 该文件使用带认证的 AES-GCM 封装；Go Agent 在读取缺失的明文 Prompt/Schema 时会自动从包内解析。明文只在进程内存中使用，不写回磁盘。这个机制主要用于避免 GitHub 直接展示内容，不等同于 DRM 或强保密——有能力分析安装包的人仍可还原。
 
-从私仓生成公仓密文包：
-
-```bash
-node scripts/build_protected_assets.mjs \
-  --source /path/to/private/Fairy \
-  --output config/protected/core.bundle
-```
-
-运行时通过 `prompts.modules_dir` 定位按需 Prompt，不再沿旧 `config/locales` 路径查找。
+> 仓库不包含系统 Prompt、按需 Prompt 与工具 Schema 的明文源文件，也不记录其内部模块划分、存储路径与生成流程。
 
 ## 关键机制
 
@@ -738,7 +697,7 @@ Fairy/
 ├─ config/
 │  ├─ config.json          模型与运行参数（本地生成，不入库）
 │  ├─ channels.json        QQ / 微信通道开关与白名单（本地生成，不入库）
-│  ├─ protected/           公仓 Prompt 与工具 Schema 密文包
+│  ├─ protected/           Prompt 与工具 Schema 受保护资源包
 │  └─ mock_responses.json  测试用 mock
 ├─ skills/                 Skills（含 qq-bot、wechat-bot、scheduled-tasks…）
 ├─ scripts/                构建、启动、检查脚本
@@ -754,7 +713,7 @@ Fairy/
 └─ 启动 Fairy.sh
 ```
 
-> 公开仓 `FairyAgent` 省略机器与运行时目录：`workspace/`、`runs/`、`memory/`、`deploy/`、`infra/`、`landing/`、`experiments/`，以及 Prompt/Schema 明文源文件。公仓改用 `config/protected/core.bundle`；`docs/` 只保留可公开的说明与界面截图，本机构建产物 `Fairy.exe` 不随仓库发布。
+> 仓库省略机器与运行时目录：`workspace/`、`runs/`、`memory/`、`deploy/`、`infra/`、`landing/`、`experiments/`，以及 Prompt/Schema 明文源文件。运行时改用 `config/protected/core.bundle`；`docs/` 只保留可公开的说明与界面截图，桌面版构建产物 `Fairy.exe` 不随仓库发布。
 
 ## TODO
 
@@ -808,11 +767,6 @@ pnpm service:restart
 # Tauri
 pnpm tauri:dev
 pnpm tauri:build
-
-# Prompt
-pnpm prompt:build
-pnpm prompt:check
-node scripts/build_protected_assets.mjs --source /path/to/private/Fairy
 
 # Python
 pnpm setup:python
